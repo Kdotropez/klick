@@ -9,11 +9,9 @@ import './App.css';
 
 function App() {
   const [shopsData, setShopsData] = useState(() => {
-    const savedShops = localStorage.getItem('shopsData');
-    return savedShops
-      ? JSON.parse(savedShops)
-      : { 'PORT GRIMAUD': ['CHRISTINE', 'VALOU', 'MANON'] };
-  });
+  const savedShops = localStorage.getItem('shopsData');
+  return savedShops ? JSON.parse(savedShops) : {};
+});
   const [selectedShop, setSelectedShop] = useState('');
   const [selectedWeek, setSelectedWeek] = useState(null);
   const [isValidated, setIsValidated] = useState(false);
