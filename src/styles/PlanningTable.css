@@ -112,6 +112,8 @@
 
     .planning-table .scrollable-col {
         cursor: pointer;
+        width: 60px; /* Largeur fixe pour toutes les tranches horaires */
+        min-width: 20px; /* Assure une largeur minimale sur iPhone */
     }
 
         .planning-table .scrollable-col:hover {
