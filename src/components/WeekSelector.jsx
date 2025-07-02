@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { fr } from 'date-fns/locale';
 import '../styles/WeekSelector.css';
 
-// Enregistrer la locale française
 registerLocale('fr', fr);
 
-const WeekSelector = ({ onWeekChange }) => {
-  const [selectedDate, setSelectedDate] = useState(null);
+const WeekSelector = ({ onWeekChange, selectedWeek }) => {
+  const [selectedDate, setSelectedDate] = useState(selectedWeek || null);
+
+  useEffect(() => {
+    console.log('WeekSelector: Mise à jour de selectedDate avec selectedWeek:', selectedWeek);
+    setSelectedDate(selectedWeek || null);
+  }, [selectedWeek]);
 
   const handleDateChange = (date) => {
+    console.log('WeekSelector: Nouvelle date sélectionnée:', date);
     setSelectedDate(date);
     if (date) onWeekChange(date);
   };
@@ -25,7 +30,7 @@ const WeekSelector = ({ onWeekChange }) => {
         filterDate={(date) => date.getDay() === 1}
         placeholderText="Choisissez un lundi"
         className="date-picker"
-        locale="fr" // Utiliser la locale française
+        locale="fr"
       />
       <p style={{ marginTop: '15px', fontSize: '10px', color: '#666', textAlign: 'center' }}>
         © Nicolas Lefèvre 2025 Klick Planning

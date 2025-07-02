@@ -4,7 +4,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import '../styles/PlanningTable.css';
 
-const PlanningTable = ({ employees, selectedWeek, selectedShop }) => {
+const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, onBackToWeek, onBackToEmployees }) => {
   const [selectedDay, setSelectedDay] = useState('Lundi');
   const [planning, setPlanning] = useState(() => {
     const saved = localStorage.getItem(`planning_${selectedShop}`);
@@ -45,6 +45,15 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop }) => {
   const getCouleurJour = (dayIndex) => {
     const couleurs = ["#e6f3ff", "#e9f7e2", "#fff2e6", "#f9e6f9", "#fffde6", "#e6f9ff", "#f0e6ff"];
     return couleurs[dayIndex % couleurs.length];
+  };
+
+  const getDayDate = (weekStart, day) => {
+    if (!weekStart) return 'Date non sélectionnée';
+    const dayIndex = days.indexOf(day);
+    if (dayIndex === -1) return 'Jour invalide';
+    const date = new Date(weekStart);
+    date.setDate(date.getDate() + dayIndex);
+    return date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   const toggleTimeSlot = (employee, day, timeRange) => {
@@ -144,6 +153,12 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop }) => {
       });
       setCopiedData(null);
     }
+  };
+
+  const toggleCopyPaste = () => {
+    const newShowCopyPaste = !showCopyPaste;
+    setShowCopyPaste(newShowCopyPaste);
+    console.log(`Copy-paste section ${newShowCopyPaste ? 'shown' : 'hidden'}`);
   };
 
   const isSlotActive = (employee, day, timeRange) => {
@@ -445,16 +460,6 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop }) => {
     setIsShopModalOpen(true);
   };
 
-  const toggleCopyPaste = () => {
-    setShowCopyPaste(!showCopyPaste);
-    console.log(`Copy-paste section ${showCopyPaste ? 'hidden' : 'shown'}`);
-  };
-
-  if (!employees || !Array.isArray(employees)) {
-    console.error('PlanningTable: Employees is undefined or not an array:', employees);
-    return <div>Erreur : Aucune liste d'employés valide</div>;
-  }
-
   return (
     <div className="planning-container">
       <h2>Création du Planning</h2>
@@ -634,7 +639,9 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop }) => {
           </button>
         ))}
       </div>
-      <p style={{ margin: '10px 0', fontSize: '16px', fontWeight: 'bold' }}>Jour : {selectedDay}, 30 juin 2025</p>
+      <p style={{ margin: '10px 0', fontSize: '16px', fontWeight: 'bold' }}>
+        Jour : {getDayDate(selectedWeek, selectedDay)}
+      </p>
       <div className="table-container">
         <div className="table-wrapper">
           <table className="planning-table" key={selectedDay}>
@@ -681,15 +688,35 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop }) => {
           </table>
         </div>
       </div>
-      <button
-        onClick={() => {
-          console.log('Opening reset modal');
-          setIsModalOpen(true);
-        }}
-        className="reset-button"
-      >
-        Réinitialiser
-      </button>
+      <div style={{ margin: '10px 0', display: 'flex', gap: '10px' }}>
+        <button
+          onClick={() => {
+            console.log('Returning to shop selection', { selectedShop, selectedWeek });
+            onBackToShop();
+          }}
+          className="reset-button"
+        >
+          Retour à la boutique
+        </button>
+        <button
+          onClick={() => {
+            console.log('Returning to week selection', { selectedShop, selectedWeek });
+            onBackToWeek();
+          }}
+          className="reset-button"
+        >
+          Retour à la semaine
+        </button>
+        <button
+          onClick={() => {
+            console.log('Returning to employee selection', { selectedShop, selectedWeek });
+            onBackToEmployees();
+          }}
+          className="reset-button"
+        >
+          Retour aux employés
+        </button>
+      </div>
       <div className="copy-paste-toggle">
         <label>
           <input
@@ -783,6 +810,17 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop }) => {
               {copyFeedback && <span className="copy-feedback">{copyFeedback}</span>}
             </div>
           ))}
+          <div style={{ margin: '10px 0' }}>
+            <button
+              onClick={() => {
+                console.log('Opening reset modal');
+                setIsModalOpen(true);
+              }}
+              className="reset-button"
+            >
+              Réinitialiser
+            </button>
+          </div>
         </div>
       )}
       <p style={{ marginTop: '15px', fontSize: '10px', color: '#666' }}>
