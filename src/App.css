@@ -1,0 +1,95 @@
+.app-container {
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header-info {
+    margin-bottom: 20px;
+    font-size: 18px;
+    color: #333;
+}
+
+    .header-info div {
+        margin: 5px 0;
+    }
+
+button {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin: 5px;
+}
+
+    button:hover {
+        background-color: #e0e0e0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    button:disabled {
+        background-color: #e9ecef;
+        cursor: not-allowed;
+    }
+
+.count-input {
+    padding: 5px;
+    font-size: 14px;
+    margin-left: 10px;
+}
+
+.employee-input {
+    padding: 5px;
+    font-size: 14px;
+    margin: 5px 0;
+    width: 200px;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.recap-button {
+    background-color: #4a90e2;
+    color: white;
+    margin: 10px 0;
+}
+
+    .recap-button:hover {
+        background-color: #357abd;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+.reset-button {
+    background-color: #e74c3c;
+    color: white;
+}
+
+    .reset-button:hover {
+        background-color: #c0392b;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+.validate-button {
+    background-color: #4a90e2;
+    color: white;
+    font-weight: bold;
+    padding: 12px 25px;
+}
+
+    .validate-button:hover {
+        background-color: #357abd;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .validate-button:disabled {
+        background-color: #e9ecef;
+        color: #6c757d;
+    }

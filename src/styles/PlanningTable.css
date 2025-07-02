@@ -1,0 +1,220 @@
+.planning-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    text-align: left;
+}
+
+    .planning-container h2 {
+        font-size: 20px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 15px;
+    }
+
+.total-hours-fixed {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.total-btn {
+    background-color: #4b5e8e;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    width: 200px;
+    text-align: left;
+}
+
+    .total-btn.shop-recap-btn {
+        background-color: #d5d5d5;
+    }
+
+    .total-btn:hover {
+        background-color: #5a6fa6;
+    }
+
+    .total-btn.shop-recap-btn:hover {
+        background-color: #c00;
+    }
+
+.day-navigation {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+    .day-navigation button {
+        background-color: #d0d0d0;
+        border: none;
+        padding: 1px 6px;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        width: 80px;
+        text-align: left;
+    }
+
+        .day-navigation button.active {
+            background-color: #4b5e8e;
+            color: #fff;
+        }
+
+        .day-navigation button:hover {
+            background-color: #d00;
+        }
+
+.table-container {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.table-wrapper {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.planning-table {
+    border-collapse: collapse;
+    width: 100%;
+    background-color: #fff;
+    border: 1px solid #ccc;
+}
+
+    .planning-table th,
+    .planning-table td {
+        padding: 8px;
+        text-align: left;
+        border: 1px solid #ccc;
+        font-size: 12px;
+    }
+
+    .planning-table th {
+        background-color: #e5e5e5;
+        font-weight: bold;
+    }
+
+    .planning-table .fixed-col {
+        position: sticky;
+        left: 0;
+        background-color: #f0f0f0;
+        font-weight: bold;
+    }
+
+    .planning-table .scrollable-col {
+        cursor: pointer;
+    }
+
+        .planning-table .scrollable-col:hover {
+            background-color: #f5f5f5;
+        }
+
+.reset-button {
+    background-color: #c00;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    width: 200px;
+    margin: 10px 0;
+}
+
+    .reset-button:hover {
+        background-color: #d00;
+    }
+
+.copy-paste-toggle {
+    margin: 2px 0;
+}
+
+.copy-paste-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.copy-paste-row {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+    padding: 2px;
+    background-color: #f0f0f0;
+    border-radius: 1px;
+}
+
+.day-btn {
+    background-color: #d0d0d0;
+    border: none;
+    padding: 6px 12px;
+    font-size: 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    width: 80px;
+}
+
+    .day-btn:hover {
+        background-color: #ff6a00;
+    }
+
+.copy-mode-select,
+.employee-select {
+    padding: 6px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    width: 150px;
+}
+
+.copy-btn,
+.paste-btn {
+    background-color: #4b5e8e;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    width: 100px;
+}
+
+    .copy-btn:hover,
+    .paste-btn:hover {
+        background-color: #5a6fa6;
+    }
+
+    .paste-btn:disabled {
+        background-color: #999;
+        cursor: not-allowed;
+    }
+
+.copy-feedback {
+    color: #090;
+    font-size: 12px;
+    flex: 1;
+}
+
+.recap-table {
+    border-collapse: collapse;
+    width: 100%;
+    border: 1px solid #ccc;
+}
+
+    .recap-table th,
+    .recap-table td {
+        border: 1px solid #ccc;
+        padding: 4px;
+        text-align: left;
+        font-size: 8px;
+    }

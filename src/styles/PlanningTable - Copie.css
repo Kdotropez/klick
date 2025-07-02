@@ -1,0 +1,293 @@
+.planning-container {
+    font-family: 'Roboto', sans-serif;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+    .filters button {
+        padding: 8px 15px;
+        font-size: 16px; /* Texte agrandi */
+        border: none;
+        border-radius: 8px;
+        background: #4a90e2;
+        color: white;
+        cursor: pointer;
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background 0.2s;
+    }
+
+        .filters button:hover {
+            background: #357abd;
+        }
+
+        .filters button.active {
+            background: #50c878;
+        }
+
+.reset-btn {
+    background: #f5a623;
+}
+
+    .reset-btn:hover {
+        background: #d68f1e;
+    }
+
+.total-hours-fixed {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    padding: 10px;
+    z-index: 1;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.total-btn {
+    padding: 10px 50px;
+    font-size: 16px; /* Texte agrandi */
+    border: none;
+    border-radius: 5px;
+    background: #ddd;
+    color: #333;
+    cursor: default;
+}
+
+.table-container {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%; /* Utiliser toute la largeur disponible */
+}
+
+.planning-table {
+    width: auto;
+    border-collapse: collapse;
+    background: white;
+    table-layout: auto; /* Flexibilité pour maximiser les tranches */
+}
+
+    .planning-table th,
+    .planning-table td {
+        padding: 8px;
+        text-align: center; /* Par défaut, mais sera surchargé pour les jours */
+        border: 1px solid #ddd;
+        min-width: 0;
+        white-space: nowrap;
+        font-size: 16px; /* Texte agrandi */
+        box-sizing: border-box; /* Empêche le débordement */
+    }
+
+.day-header,
+.day-header-row {
+    background: #4a90e2;
+    color: white;
+    font-size: 18px; /* Texte agrandi */
+    text-align: left; /* Alignement à gauche */
+    padding: 8px 10px; /* Padding ajusté pour alignement net */
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    min-width: 100px;
+}
+
+.day-header {
+    left: 0;
+    z-index: 4; /* Priorité maximale */
+}
+
+.day-header-row {
+    z-index: 3;
+}
+
+.fixed-col {
+    position: sticky;
+    background: white;
+    z-index: 2;
+}
+
+.planning-table th.fixed-col {
+    background: #4a90e2;
+    color: white;
+    font-size: 16px; /* Texte agrandi */
+    top: 0;
+}
+
+.planning-table th:nth-child(2).fixed-col {
+    left: 1px;
+    min-width: 200px;
+}
+
+.planning-table th:nth-child(3).fixed-col {
+    left: 250px;
+    min-width: 100px;
+}
+
+.planning-table td.fixed-col {
+    left: 0;
+}
+
+.planning-table td:nth-child(2).fixed-col {
+    left: 50px;
+    min-width: 10px;
+}
+
+.planning-table td:nth-child(3).fixed-col {
+    left: 250px;
+    min-width: 100px;
+}
+
+.scrollable-col {
+    min-width: 80px;
+}
+
+.day-cell {
+    background: transparent;
+    min-width: 100px;
+    text-align: left; /* Alignement à gauche pour les cellules de jour */
+}
+
+.interline {
+    height: 12px;
+    background: transparent;
+}
+
+.time-slot {
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px; /* Texte agrandi */
+    min-width: 80px;
+    height: 40px; /* Hauteur augmentée pour lisibilité */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%; /* Remplir la cellule */
+    height: 100%; /* Remplir la cellule */
+}
+
+    .time-slot:hover {
+        background: #ddd;
+    }
+
+.nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 10px;
+    font-size: 16px; /* Texte agrandi */
+    border: none;
+    border-radius: 50%;
+    background: #4a90e2;
+    color: white;
+    cursor: pointer;
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    z-index: 10;
+}
+
+    .nav-btn.left {
+        left: 0;
+    }
+
+    .nav-btn.right {
+        right: 0;
+    }
+
+    .nav-btn:hover {
+        background: #357abd;
+    }
+
+.weekly-recap {
+    margin-top: 20px;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.employee-recap {
+    margin: 5px 0;
+    font-size: 16px; /* Texte agrandi */
+}
+
+@media (max-width: 768px) {
+    .planning-container {
+        padding: 10px;
+    }
+
+    .filters button {
+        font-size: 14px; /* Texte agrandi */
+        padding: 6px 12px;
+    }
+
+    .planning-table th,
+    .planning-table td {
+        padding: 6px;
+        font-size: 14px; /* Texte agrandi */
+    }
+
+    .time-slot {
+        font-size: 14px; /* Texte agrandi */
+        min-width: 70px;
+        height: 35px; /* Hauteur ajustée */
+    }
+
+    .nav-btn {
+        padding: 8px;
+        min-width: 35px;
+        min-height: 35px;
+    }
+}
+
+@media (max-width: 480px) {
+    .planning-table th,
+    .planning-table td {
+        font-size: 12px; /* Texte agrandi */
+    }
+
+    .time-slot {
+        min-width: 60px;
+        font-size: 12px; /* Texte agrandi */
+        height: 30px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .table-wrapper {
+        max-width: none; /* Pas de limite sur grand écran */
+    }
+
+    .planning-table {
+        width: 100%; /* Utiliser toute la largeur */
+    }
+
+    .scrollable-col {
+        min-width: 80px;
+        max-width: 80px; /* Limite pour maximiser les tranches */
+    }
+}

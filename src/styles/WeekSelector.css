@@ -1,0 +1,23 @@
+.week-selector-container {
+    font-family: 'Roboto', sans-serif;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    text-align: center;
+}
+
+.date-picker {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    min-width: 200px;
+    min-height: 44px;
+    font-family: 'Roboto', sans-serif;
+}
+
+@media (max-width: 768px) {
+    .date-picker {
+        width: 100%;
+    }
+}
