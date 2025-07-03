@@ -1,43 +1,46 @@
 import React, { useState, useEffect } from 'react';
+import Modal from './Modal';
 import '../styles/EmployeeSelector.css';
 
-const EmployeeSelector = ({ selectedShop, onEmployeesChange, onValidate }) => {
+const EmployeeSelector = ({ selectedShop, selectedWeek, onEmployeesChange, onValidate, onBack }) => {
   const [employees, setEmployees] = useState(() => {
     const saved = localStorage.getItem(`employees_${selectedShop}`);
+    console.log('EmployeeSelector: Initializing employees from localStorage for', selectedShop, saved);
     return saved ? JSON.parse(saved) : [];
   });
   const [newEmployee, setNewEmployee] = useState('');
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   useEffect(() => {
+    console.log('EmployeeSelector: Saving employees to localStorage for', selectedShop, employees);
     localStorage.setItem(`employees_${selectedShop}`, JSON.stringify(employees));
-    console.log(`EmployeeSelector: Employees updated for ${selectedShop}:`, employees);
+    console.log('EmployeeSelector: Notifying parent of employees update:', employees);
     onEmployeesChange(employees);
   }, [employees, selectedShop, onEmployeesChange]);
 
   const handleAddEmployee = () => {
-    if (newEmployee.trim() && !employees.includes(newEmployee.trim().toUpperCase())) {
-      const updatedEmployees = [...employees, newEmployee.trim().toUpperCase()];
+    const employeeName = newEmployee.trim().toUpperCase();
+    console.log('EmployeeSelector: Attempting to add employee:', employeeName);
+    if (employeeName && !employees.includes(employeeName)) {
+      const updatedEmployees = [...employees, employeeName];
+      console.log('EmployeeSelector: Adding employee to state:', updatedEmployees);
       setEmployees(updatedEmployees);
       setNewEmployee('');
-      console.log(`EmployeeSelector: Added employee ${newEmployee.trim().toUpperCase()} for ${selectedShop}`);
     } else {
-      console.log('EmployeeSelector: Add employee cancelled - Empty or duplicate name');
+      console.warn('EmployeeSelector: Cannot add employee - empty or duplicate:', employeeName);
     }
+  };
+
+  const handleRemoveEmployee = (employee) => {
+    console.log('EmployeeSelector: Removing employee:', employee);
+    setEmployees(employees.filter((emp) => emp !== employee));
   };
 
   const handleResetEmployees = () => {
+    console.log('EmployeeSelector: Resetting employees');
     setEmployees([]);
     setNewEmployee('');
-    console.log(`EmployeeSelector: Employees reset for ${selectedShop}`);
-  };
-
-  const handleSelectEmployee = () => {
-    if (employees.length > 0) {
-      onValidate();
-      console.log(`EmployeeSelector: Validated employees for ${selectedShop}:`, employees);
-    } else {
-      console.log('EmployeeSelector: No employees to validate');
-    }
+    setIsResetModalOpen(false);
   };
 
   return (
@@ -50,7 +53,7 @@ const EmployeeSelector = ({ selectedShop, onEmployeesChange, onValidate }) => {
           employees.map((employee) => (
             <button
               key={employee}
-              onClick={handleSelectEmployee}
+              onClick={() => handleRemoveEmployee(employee)}
               className="employee-button"
             >
               {employee}
@@ -62,7 +65,10 @@ const EmployeeSelector = ({ selectedShop, onEmployeesChange, onValidate }) => {
         <input
           type="text"
           value={newEmployee}
-          onChange={(e) => setNewEmployee(e.target.value)}
+          onChange={(e) => {
+            console.log('EmployeeSelector: Input changed:', e.target.value);
+            setNewEmployee(e.target.value);
+          }}
           placeholder="Nom de l'employé"
           className="employee-input"
         />
@@ -74,14 +80,51 @@ const EmployeeSelector = ({ selectedShop, onEmployeesChange, onValidate }) => {
           <i className="fas fa-plus"></i> Ajouter
         </button>
       </div>
-      {employees.length > 0 && (
-        <button onClick={handleResetEmployees} className="reset-employee-button">
+      <div className="button-group">
+        <button
+          onClick={() => {
+            console.log('EmployeeSelector: Opening reset modal');
+            setIsResetModalOpen(true);
+          }}
+          className="reset-employee-button"
+          disabled={employees.length === 0}
+        >
           <i className="fas fa-trash"></i> Réinitialiser
         </button>
-      )}
-      <p style={{ marginTop: '15px', fontSize: '10px', color: '#666', textAlign: 'center' }}>
-        © Nicolas Lefèvre 2025 Klick Planning
-      </p>
+        <button
+          onClick={() => {
+            console.log('EmployeeSelector: Navigating back');
+            onBack();
+          }}
+          className="back-button"
+        >
+          Retour
+        </button>
+        <button
+          onClick={() => {
+            console.log('EmployeeSelector: Validating employees:', employees);
+            onValidate();
+          }}
+          className="next-step-btn"
+          disabled={employees.length === 0}
+        >
+          Étape suivante
+        </button>
+      </div>
+      <p className="copyright">© Nicolas Lefèvre Klick Planning 2025</p>
+      <Modal
+        isOpen={isResetModalOpen}
+        onClose={() => {
+          console.log('EmployeeSelector: Closing reset employees Modal');
+          setIsResetModalOpen(false);
+        }}
+        onConfirm={() => {
+          console.log('EmployeeSelector: Confirming reset employees');
+          handleResetEmployees();
+        }}
+        message="Voulez-vous vraiment réinitialiser la liste des employés ?"
+        style={{ width: '400px', padding: '20px' }}
+      />
     </div>
   );
 };

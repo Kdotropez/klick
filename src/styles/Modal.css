@@ -1,4 +1,3 @@
-/* src/styles/Modal.css */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -16,7 +15,7 @@
     background: white;
     padding: 20px;
     border-radius: 8px;
-    max-width: 400px;
+    max-width: 500px;
     width: 90%;
     text-align: center;
     font-family: 'Roboto', sans-serif;
@@ -35,26 +34,38 @@
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    min-width: 44px;
+    min-width: 100px;
     min-height: 44px;
+    transition: background 0.3s ease;
 }
 
     .modal-btn.cancel {
-        background: #ddd;
-        color: #333;
+        background: #666;
+        color: #fff;
     }
+
+        .modal-btn.cancel:hover {
+            background: #555;
+        }
 
     .modal-btn.confirm {
         background: #f5a623;
         color: white;
     }
 
+        .modal-btn.confirm:hover {
+            background: #e69500;
+        }
+
 @media (max-width: 480px) {
     .modal-content {
         padding: 15px;
+        max-width: 90%;
     }
 
     .modal-btn {
         font-size: 14px;
+        min-width: 80px;
+        padding: 8px 16px;
     }
 }

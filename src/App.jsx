@@ -10,6 +10,7 @@ import './App.css';
 function App() {
   const [shopsData, setShopsData] = useState(() => {
     const savedShops = localStorage.getItem('shopsData');
+    console.log('App: Initializing shopsData from localStorage:', savedShops);
     return savedShops ? JSON.parse(savedShops) : {};
   });
   const [selectedShop, setSelectedShop] = useState('');
@@ -17,8 +18,8 @@ function App() {
   const [currentStep, setCurrentStep] = useState('shop'); // shop, week, employees, planning
 
   useEffect(() => {
+    console.log('App: Saving shopsData to localStorage:', shopsData);
     localStorage.setItem('shopsData', JSON.stringify(shopsData));
-    console.log('App: Shops data updated in localStorage:', shopsData);
   }, [shopsData]);
 
   const resetShops = () => {
@@ -32,43 +33,48 @@ function App() {
   };
 
   const goBackToShop = () => {
-    console.log('App: Retour à la sélection de la boutique', { selectedShop, selectedWeek, currentStep });
+    console.log('App: Retour à la sélection de la boutique', { shopsData, selectedShop, selectedWeek, currentStep });
     setSelectedShop('');
     setSelectedWeek(null);
     setCurrentStep('shop');
-    console.log('App: Après retour à la boutique', { selectedShop: '', selectedWeek: null, currentStep: 'shop' });
+    console.log('App: Après retour à la boutique', { shopsData, selectedShop: '', selectedWeek: null, currentStep: 'shop' });
   };
 
   const goBackToWeek = () => {
-    console.log('App: Retour à la sélection de la semaine', { selectedShop, selectedWeek, currentStep });
+    console.log('App: Retour à la sélection de la semaine', { shopsData, selectedShop, selectedWeek, currentStep });
     setCurrentStep('week');
-    console.log('App: Après retour à la semaine', { selectedShop, selectedWeek, currentStep: 'week' });
+    console.log('App: Après retour à la semaine', { shopsData, selectedShop, selectedWeek, currentStep: 'week' });
   };
 
   const goBackToEmployees = () => {
-    console.log('App: Retour à la sélection des employés', { selectedShop, selectedWeek, currentStep });
+    console.log('App: Retour à la sélection des employés', { shopsData, selectedShop, selectedWeek, currentStep });
     setCurrentStep('employees');
-    console.log('App: Après retour aux employés', { selectedShop, selectedWeek, currentStep: 'employees' });
+    console.log('App: Après retour aux employés', { shopsData, selectedShop, selectedWeek, currentStep: 'employees' });
   };
 
   const goBackToShopFromPlanning = () => {
-    console.log('App: Retour direct à la sélection de la boutique depuis PlanningTable', { selectedShop, selectedWeek, currentStep });
+    console.log('App: Retour direct à la sélection de la boutique depuis PlanningTable', { shopsData, selectedShop, selectedWeek, currentStep });
     setSelectedShop('');
     setSelectedWeek(null);
     setCurrentStep('shop');
-    console.log('App: Après retour à la boutique depuis PlanningTable', { selectedShop: '', selectedWeek: null, currentStep: 'shop' });
+    console.log('App: Après retour à la boutique depuis PlanningTable', { shopsData, selectedShop: '', selectedWeek: null, currentStep: 'shop' });
   };
 
   const goBackToWeekFromPlanning = () => {
-    console.log('App: Retour direct à la sélection de la semaine depuis PlanningTable', { selectedShop, selectedWeek, currentStep });
+    console.log('App: Retour direct à la sélection de la semaine depuis PlanningTable', { shopsData, selectedShop, selectedWeek, currentStep });
     setCurrentStep('week');
-    console.log('App: Après retour à la semaine depuis PlanningTable', { selectedShop, selectedWeek, currentStep: 'week' });
+    console.log('App: Après retour à la semaine depuis PlanningTable', { shopsData, selectedShop, selectedWeek, currentStep: 'week' });
   };
 
   const goBackToEmployeesFromPlanning = () => {
-    console.log('App: Retour direct à la sélection des employés depuis PlanningTable', { selectedShop, selectedWeek, currentStep });
+    console.log('App: Retour direct à la sélection des employés depuis PlanningTable', { shopsData, selectedShop, selectedWeek, currentStep });
     setCurrentStep('employees');
-    console.log('App: Après retour aux employés depuis PlanningTable', { selectedShop, selectedWeek, currentStep: 'employees' });
+    console.log('App: Après retour aux employés depuis PlanningTable', { shopsData, selectedShop, selectedWeek, currentStep: 'employees' });
+  };
+
+  const handleWeekChange = (week) => {
+    console.log('App: Semaine sélectionnée dans PlanningTable:', week);
+    setSelectedWeek(week);
   };
 
   const getWeekRange = (date) => {
@@ -94,19 +100,19 @@ function App() {
             key={Object.keys(shopsData).length}
             shops={Object.keys(shopsData)}
             onShopChange={(shop) => {
+              console.log('App: Boutique sélectionnée:', shop, { shopsData, currentStep: 'week' });
               setSelectedShop(shop);
               setCurrentStep('week');
-              console.log('App: Boutique sélectionnée:', shop, { currentStep: 'week' });
             }}
             onAddShop={(newShop) => {
               if (newShop.trim() && !Object.keys(shopsData).includes(newShop.trim().toUpperCase())) {
+                console.log('App: Adding shop:', newShop.trim().toUpperCase());
                 setShopsData((prev) => ({
                   ...prev,
-                  [newShop.trim().toUpperCase()]: [],
+                  [newShop.trim().toUpperCase()]: prev[newShop.trim().toUpperCase()] || [],
                 }));
-                console.log('App: Added shop:', newShop.trim().toUpperCase());
               } else {
-                console.warn('App: Shop name is empty or already exists');
+                console.warn('App: Shop name is empty or already exists:', newShop);
               }
             }}
           />
@@ -131,27 +137,23 @@ function App() {
         </>
       )}
       {currentStep === 'employees' && selectedShop && selectedWeek && (
-        <>
-          <EmployeeSelector
-            selectedShop={selectedShop}
-            selectedWeek={selectedWeek}
-            onEmployeesChange={(newEmployees) => {
-              setShopsData((prev) => ({
-                ...prev,
-                [selectedShop]: newEmployees,
-              }));
-            }}
-            onValidate={() => {
-              console.log('App: Validation des employés, passage à PlanningTable');
-              setCurrentStep('planning');
-            }}
-          />
-          <div>
-            <button onClick={goBackToWeek} className="reset-button">
-              Retour
-            </button>
-          </div>
-        </>
+        <EmployeeSelector
+          selectedShop={selectedShop}
+          selectedWeek={selectedWeek}
+          shopsData={shopsData}
+          onEmployeesChange={(newEmployees) => {
+            console.log('App: Updating employees for shop:', selectedShop, newEmployees);
+            setShopsData((prev) => ({
+              ...prev,
+              [selectedShop]: newEmployees,
+            }));
+          }}
+          onValidate={() => {
+            console.log('App: Validation des employés, passage à PlanningTable', { shopsData });
+            setCurrentStep('planning');
+          }}
+          onBack={goBackToWeek}
+        />
       )}
       {currentStep === 'planning' && selectedShop && selectedWeek && shopsData[selectedShop] && Array.isArray(shopsData[selectedShop]) && shopsData[selectedShop].length > 0 && (
         <div style={{ textAlign: 'left' }}>
@@ -162,13 +164,12 @@ function App() {
             onBackToShop={goBackToShopFromPlanning}
             onBackToWeek={goBackToWeekFromPlanning}
             onBackToEmployees={goBackToEmployeesFromPlanning}
+            onWeekChange={handleWeekChange}
           />
         </div>
       )}
     </div>
   );
 }
+
 export default App;
-
-
- 

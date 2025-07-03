@@ -7,25 +7,13 @@ const Modal = ({ isOpen, onClose, onConfirm, message, style }) => {
   return (
     <div className="modal-overlay">
       <div className="modal-content" style={style}>
-        <div>{message}</div>
+        {message}
         <div className="modal-buttons">
-          <button
-            className="modal-btn confirm"
-            onClick={() => {
-              console.log('Modal: onConfirm triggered, message:', typeof message === 'string' ? message : 'Custom content');
-              onConfirm();
-            }}
-          >
-            Oui
+          <button onClick={onClose} className="modal-btn cancel">
+            Annuler
           </button>
-          <button
-            className="modal-btn cancel"
-            onClick={() => {
-              console.log('Modal: onClose triggered, message:', typeof message === 'string' ? message : 'Custom content');
-              onClose();
-            }}
-          >
-            Non
+          <button onClick={onConfirm} className="modal-btn confirm">
+            Confirmer
           </button>
         </div>
       </div>
