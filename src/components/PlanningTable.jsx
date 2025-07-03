@@ -16,6 +16,7 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
   const [copiedData, setCopiedData] = useState(null);
   const [copyMode, setCopyMode] = useState('all');
   const [copyFeedback, setCopyFeedback] = useState('');
+  const [resetFeedback, setResetFeedback] = useState('');
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [isShopModalOpen, setIsShopModalOpen] = useState(false);
   const [showCopyPaste, setShowCopyPaste] = useState(true);
@@ -106,6 +107,8 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
     setIsModalOpen(false);
     setCopiedData(null);
     setCopyFeedback('');
+    setResetFeedback('Planning réinitialisé avec succès !');
+    setTimeout(() => setResetFeedback(''), 2000);
     console.log('resetSchedules: Planning reset to', {});
   };
 
@@ -688,7 +691,7 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
           </table>
         </div>
       </div>
-      <div style={{ margin: '10px 0', display: 'flex', gap: '10px' }}>
+      <div style={{ margin: '10px 0', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button
           onClick={() => {
             console.log('Returning to shop selection', { selectedShop, selectedWeek });
@@ -810,7 +813,7 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
               {copyFeedback && <span className="copy-feedback">{copyFeedback}</span>}
             </div>
           ))}
-          <div style={{ margin: '10px 0' }}>
+          <div style={{ margin: '10px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button
               onClick={() => {
                 console.log('Opening reset modal');
@@ -820,6 +823,7 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
             >
               Réinitialiser
             </button>
+            {resetFeedback && <span className="copy-feedback">{resetFeedback}</span>}
           </div>
         </div>
       )}

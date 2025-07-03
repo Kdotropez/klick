@@ -1,222 +1,209 @@
 .planning-container {
-    max-width: 1000px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
-    font-family: Arial, sans-serif;
-    text-align: left;
+    text-align: center;
 }
-
-    .planning-container h2 {
-        font-size: 20px;
-        font-weight: bold;
-        color: #333;
-        margin-bottom: 15px;
-    }
 
 .total-hours-fixed {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-    margin-bottom: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
 }
 
 .total-btn {
-    background-color: #4b5e8e;
-    color: #fff;
+    width: auto;
+    min-width: 120px;
+    max-width: 180px;
+    padding: 10px 15px;
+    background: #d5d5d5;
     border: none;
-    padding: 8px 16px;
-    font-size: 14px;
-    border-radius: 3px;
+    border-radius: 5px;
     cursor: pointer;
-    width: 200px;
-    text-align: left;
+    font-size: 14px;
+    text-align: center;
 }
 
-    .total-btn.shop-recap-btn {
-        background-color: #d5d5d5;
-    }
-
     .total-btn:hover {
-        background-color: #5a6fa6;
+        background: #c00;
+        color: white;
     }
 
-    .total-btn.shop-recap-btn:hover {
-        background-color: #c00;
+.shop-recap-btn {
+    background: #d5d5d5;
+}
+
+    .shop-recap-btn:hover {
+        background: #c00;
+        color: white;
     }
 
 .day-navigation {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 5px;
-    margin-bottom: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
 }
 
-    .day-navigation button {
-        background-color: #d0d0d0;
-        border: none;
-        padding: 1px 6px;
-        font-size: 16px;
-        border-radius: 5px;
-        cursor: pointer;
-        width: 80px;
-        text-align: left;
-    }
-
-        .day-navigation button.active {
-            background-color: #4b5e8e;
-            color: #fff;
-        }
-
-        .day-navigation button:hover {
-            background-color: #d00;
-        }
+.total-btn.active {
+    background: #4b5e8e;
+    color: white;
+}
 
 .table-container {
-    display: flex;
-    justify-content: flex-start;
+    max-width: 100%;
+    overflow-x: auto;
+    margin-bottom: 20px;
 }
 
 .table-wrapper {
-    max-width: 100%;
-    overflow-x: auto;
+    min-width: 800px;
 }
 
 .planning-table {
-    border-collapse: collapse;
     width: 100%;
-    background-color: #fff;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.fixed-col {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 1;
+    width: 180px;
+    min-width: 180px;
+    border-right: 2px solid #ccc;
+    font-weight: bold;
+    text-align: left;
+    padding-left: 10px;
+}
+
+.scrollable-col {
+    width: 80px;
+    min-width: 40px;
+    text-align: center;
     border: 1px solid #ccc;
 }
 
-    .planning-table th,
-    .planning-table td {
-        padding: 8px;
-        text-align: left;
-        border: 1px solid #ccc;
-        font-size: 12px;
+    .scrollable-col:hover {
+        background: #f0f0f0;
     }
-
-    .planning-table th {
-        background-color: #e5e5e5;
-        font-weight: bold;
-    }
-
-    .planning-table .fixed-col {
-        position: sticky;
-        left: 0;
-        background-color: #f0f0f0;
-        font-weight: bold;
-    }
-
-    .planning-table .scrollable-col {
-        cursor: pointer;
-        width: 60px; /* Largeur fixe pour toutes les tranches horaires */
-        min-width: 20px; /* Assure une largeur minimale sur iPhone */
-    }
-
-        .planning-table .scrollable-col:hover {
-            background-color: #f5f5f5;
-        }
 
 .reset-button {
-    background-color: #c00;
-    color: #fff;
+    width: auto;
+    min-width: 120px;
+    max-width: 180px;
+    padding: 10px 15px;
+    background: #c00;
+    color: white;
     border: none;
-    padding: 8px 16px;
-    font-size: 14px;
-    border-radius: 3px;
+    border-radius: 5px;
     cursor: pointer;
-    width: 200px;
-    margin: 10px 0;
+    font-size: 14px;
+    text-align: center;
 }
 
     .reset-button:hover {
-        background-color: #d00;
+        background: #d00;
     }
 
 .copy-paste-toggle {
-    margin: 2px 0;
+    margin: 15px 0;
+    text-align: center;
 }
 
 .copy-paste-section {
+    margin-top: 15px;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-top: 10px;
+    align-items: center;
 }
 
 .copy-paste-row {
     display: flex;
-    align-items: baseline;
-    gap: 2px;
-    padding: 2px;
-    background-color: #f0f0f0;
-    border-radius: 1px;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
 }
 
 .day-btn {
-    background-color: #d0d0d0;
+    width: auto;
+    min-width: 70px;
+    max-width: 90px;
+    padding: 8px 12px;
+    background: #d0d0d0;
     border: none;
-    padding: 6px 12px;
-    font-size: 14px;
-    border-radius: 3px;
+    border-radius: 5px;
     cursor: pointer;
-    width: 80px;
+    font-size: 13px;
+    text-align: center;
 }
 
     .day-btn:hover {
-        background-color: #ff6a00;
+        background: #ff6a00;
+        color: white;
     }
 
 .copy-mode-select,
 .employee-select {
-    padding: 6px;
-    font-size: 12px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    width: 150px;
+    padding: 8px;
+    font-size: 13px;
+    min-width: 100px;
+    max-width: 150px;
 }
 
 .copy-btn,
 .paste-btn {
-    background-color: #4b5e8e;
-    color: #fff;
+    padding: 8px 12px;
     border: none;
-    padding: 6px 12px;
-    font-size: 12px;
-    border-radius: 3px;
+    border-radius: 5px;
     cursor: pointer;
-    width: 100px;
+    font-size: 13px;
+    min-width: 80px;
 }
 
-    .copy-btn:hover,
+.copy-btn {
+    background: #4b5e8e;
+    color: white;
+}
+
+    .copy-btn:hover {
+        background: #5b6e9e;
+    }
+
+.paste-btn {
+    background: #f5a623;
+    color: white;
+}
+
     .paste-btn:hover {
-        background-color: #5a6fa6;
+        background: #ffb733;
     }
 
     .paste-btn:disabled {
-        background-color: #999;
+        background: #ccc;
         cursor: not-allowed;
     }
 
 .copy-feedback {
     color: #090;
-    font-size: 12px;
-    flex: 1;
+    font-size: 13px;
 }
 
-.recap-table {
-    border-collapse: collapse;
-    width: 100%;
+.recap-table th,
+.recap-table td {
     border: 1px solid #ccc;
+    padding: 6px;
+    text-align: left;
 }
 
-    .recap-table th,
-    .recap-table td {
-        border: 1px solid #ccc;
-        padding: 4px;
-        text-align: left;
-        font-size: 8px;
-    }
+h2, p {
+    text-align: center;
+    margin: 15px 0;
+}
