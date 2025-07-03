@@ -81,7 +81,7 @@ function App() {
 
   return (
     <div className="app-container">
-      <h1>Gestion du Planning (v2)</h1>
+      <h1>Gestion du Planning (v3)</h1>
       {selectedShop && selectedWeek && (
         <div className="header-info">
           <div><strong>{selectedShop}</strong></div>
