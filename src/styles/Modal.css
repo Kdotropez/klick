@@ -1,46 +1,209 @@
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background-color: white;
-    border-radius: 5px;
-    position: relative;
-    max-width: 90%;
-    max-height: 90vh;
-    overflow: auto;
+.planning-container {
+    max-width: 1200px;
+    margin: 0 auto;
     padding: 20px;
+    text-align: center;
 }
 
-.modal-body {
+.week-selector {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+}
+
+.week-select {
+    padding: 8px;
+    font-size: 16px;
+}
+
+.total-hours-fixed {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
     margin-bottom: 20px;
 }
 
-.modal-buttons {
+.total-btn {
+    padding: 8px 16px;
+    font-size: 14px;
+    border: none;
+    border-radius: 5px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+}
+
+    .total-btn:hover {
+        background-color: #0056b3;
+    }
+
+.shop-recap-btn {
+    background-color: #28a745;
+}
+
+    .shop-recap-btn:hover {
+        background-color: #218838;
+    }
+
+.day-navigation {
     display: flex;
-    justify-content: flex-end;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.day-date {
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.time-slot-section {
+    margin-bottom: 30px;
+}
+
+.time-slot-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.table-container {
+    margin-bottom: 20px;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    max-width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.planning-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.fixed-col {
+    position: sticky;
+    left: 0;
+    background-color: white;
+    border-right: 2px solid #ccc;
+    z-index: 1;
+    min-width: 150px;
+    padding: 8px;
+    font-weight: bold;
+}
+
+.scrollable-col {
+    min-width: 60px;
+    padding: 8px;
+    text-align: center;
+    border: 1px solid #ccc;
+}
+
+.planning-table th,
+.planning-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    font-size: 12px;
+}
+
+.planning-table th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+}
+
+.copy-paste-toggle {
+    margin: 20px 0;
+}
+
+.copy-paste-section {
+    margin-top: 20px;
+    text-align: left;
+}
+
+.copy-paste-controls {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
 }
 
-.modal-confirm-btn {
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.copy-mode-select,
+.employee-select,
+.day-select,
+.previous-week-select {
+    padding: 8px;
+    font-size: 14px;
+}
+
+.target-days,
+.previous-days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+}
+
+.copy-btn,
+.paste-btn,
+.reset-selections-btn {
     padding: 8px 16px;
     font-size: 14px;
     cursor: pointer;
     border: none;
     border-radius: 5px;
+}
+
+.copy-btn {
     background-color: #28a745;
     color: white;
 }
 
-.modal-close-btn:hover {
-    color: #a71d2a;
+.paste-btn {
+    background-color: #007bff;
+    color: white;
+}
+
+.reset-selections-btn {
+    background-color: #dc3545;
+    color: white;
+}
+
+    .copy-btn:disabled,
+    .paste-btn:disabled,
+    .reset-selections-btn:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
+
+.copy-feedback {
+    color: #28a745;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.no-weeks {
+    color: #dc3545;
+    font-size: 14px;
+}
+
+.copyright {
+    font-size: 10px;
+    color: #666;
+    margin-top: 15px;
+    text-align: center;
 }
