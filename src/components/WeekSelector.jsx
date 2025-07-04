@@ -1,28 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import DatePicker, { registerLocale } from 'react-datepicker';
+import React, { useState } from 'react';
+import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { registerLocale } from 'react-datepicker';
 import { fr } from 'date-fns/locale';
 import '../styles/WeekSelector.css';
 
 registerLocale('fr', fr);
 
 const WeekSelector = ({ onWeekChange, selectedWeek }) => {
-  const [selectedDate, setSelectedDate] = useState(selectedWeek || null);
-
-  useEffect(() => {
-    console.log('WeekSelector: Mise à jour de selectedDate avec selectedWeek:', selectedWeek);
-    setSelectedDate(selectedWeek || null);
-  }, [selectedWeek]);
+  const [selectedDate, setSelectedDate] = useState(selectedWeek ? new Date(selectedWeek) : null);
 
   const handleDateChange = (date) => {
-    console.log('WeekSelector: Nouvelle date sélectionnée:', date);
+    console.log('WeekSelector: Date selected:', date);
     setSelectedDate(date);
-    if (date) onWeekChange(date);
+    if (date) {
+      // Normaliser la date pour éviter les problèmes de fuseau horaire
+      const normalizedDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const week = normalizedDate.toISOString().split('T')[0];
+      console.log('WeekSelector: Calling onWeekChange with:', week);
+      onWeekChange(week);
+    }
   };
 
   return (
-    <div className="week-selector-container">
-      <h2>Sélectionner une semaine</h2>
+    <div className="week-selector">
+      <h2>Sélection de la Semaine</h2>
       <DatePicker
         selected={selectedDate}
         onChange={handleDateChange}
@@ -32,9 +34,7 @@ const WeekSelector = ({ onWeekChange, selectedWeek }) => {
         className="date-picker"
         locale="fr"
       />
-      <p style={{ marginTop: '15px', fontSize: '10px', color: '#666', textAlign: 'center' }}>
-        © Nicolas Lefèvre 2025 Klick Planning
-      </p>
+      <p className="copyright">© Nicolas Lefèvre Klick Planning 2025</p>
     </div>
   );
 };

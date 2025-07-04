@@ -1,21 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import ShopSelector from './components/ShopSelector';
 import WeekSelector from './components/WeekSelector';
 import EmployeeSelector from './components/EmployeeSelector';
 import PlanningTable from './components/PlanningTable';
 import Modal from './components/Modal';
+import { format, addDays, isMonday } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import './App.css';
 
 function App() {
   const [shopsData, setShopsData] = useState(() => {
     const savedShops = localStorage.getItem('shopsData');
     console.log('App: Initializing shopsData from localStorage:', savedShops);
-    return savedShops ? JSON.parse(savedShops) : {};
+    const shops = savedShops ? JSON.parse(savedShops) : {};
+    Object.keys(shops).forEach((shop) => {
+      const savedEmployees = localStorage.getItem(`employees_${shop}`);
+      if (savedEmployees) {
+        shops[shop] = JSON.parse(savedEmployees);
+      }
+    });
+    return shops;
   });
   const [selectedShop, setSelectedShop] = useState('');
   const [selectedWeek, setSelectedWeek] = useState(null);
-  const [currentStep, setCurrentStep] = useState('shop'); // shop, week, employees, planning
+  const [currentStep, setCurrentStep] = useState('shop');
 
   useEffect(() => {
     console.log('App: Saving shopsData to localStorage:', shopsData);
@@ -29,7 +38,21 @@ function App() {
     setSelectedWeek(null);
     setCurrentStep('shop');
     localStorage.setItem('shopsData', JSON.stringify({}));
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('employees_') || key.startsWith('planning_')) {
+        localStorage.removeItem(key);
+      }
+    });
     console.log('App: Boutiques réinitialisées', { shopsData: {}, selectedShop: '', selectedWeek: null, currentStep: 'shop' });
+  };
+
+  const clearLocalStorage = () => {
+    Object.keys(localStorage).forEach((key) => localStorage.removeItem(key));
+    console.log('App: localStorage cleared');
+    setShopsData({});
+    setSelectedShop('');
+    setSelectedWeek(null);
+    setCurrentStep('shop');
   };
 
   const goBackToShop = () => {
@@ -73,16 +96,44 @@ function App() {
   };
 
   const handleWeekChange = (week) => {
-    console.log('App: Semaine sélectionnée dans PlanningTable:', week);
-    setSelectedWeek(week);
+    console.log('App: Semaine sélectionnée:', week);
+    const date = new Date(week);
+    const normalizedDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    console.log('App: Normalized date:', normalizedDate, 'Is Monday?', isMonday(normalizedDate));
+    if (isMonday(normalizedDate)) {
+      setSelectedWeek(week);
+      setCurrentStep('employees');
+    } else {
+      console.warn('App: Selected week is not a Monday, ignoring:', week);
+    }
   };
+
+  const handleEmployeesChange = useCallback((newEmployees) => {
+    console.log('App: Updating employees for shop:', selectedShop, newEmployees);
+    setShopsData((prev) => {
+      const updated = { ...prev, [selectedShop]: newEmployees };
+      console.log('App: Updated shopsData:', updated);
+      return updated;
+    });
+  }, [selectedShop]);
+
+  const handleValidate = useCallback(() => {
+    console.log('App: Validation des employés, passage à PlanningTable', { shopsData, selectedShop, selectedWeek, currentStep });
+    console.log('App: Rendering conditions - selectedShop:', selectedShop, 'selectedWeek:', selectedWeek, 'shopsData[selectedShop]:', shopsData[selectedShop]);
+    setCurrentStep('planning');
+  }, [shopsData, selectedShop, selectedWeek]);
 
   const getWeekRange = (date) => {
     if (!date) return 'Semaine non sélectionnée';
     const start = new Date(date);
-    const end = new Date(date);
+    const normalizedStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+    if (!isMonday(normalizedStart)) {
+      console.warn('App: getWeekRange received non-Monday date:', date);
+      return 'Semaine non valide';
+    }
+    const end = new Date(normalizedStart);
     end.setDate(end.getDate() + 6);
-    return `${start.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} au ${end.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}`;
+    return `Semaine du lundi ${format(normalizedStart, 'dd/MM/yy', { locale: fr })} au dimanche ${format(end, 'dd/MM/yy', { locale: fr })}`;
   };
 
   return (
@@ -119,16 +170,15 @@ function App() {
           <button onClick={resetShops} className="reset-button">
             Réinitialiser les boutiques
           </button>
+          <button onClick={clearLocalStorage} className="reset-button">
+            Nettoyer localStorage
+          </button>
         </>
       )}
       {currentStep === 'week' && (
         <>
           <WeekSelector
-            onWeekChange={(date) => {
-              console.log('App: Semaine sélectionnée:', date);
-              setSelectedWeek(date);
-              setCurrentStep('employees');
-            }}
+            onWeekChange={handleWeekChange}
             selectedWeek={selectedWeek}
           />
           <button onClick={goBackToShop} className="reset-button">
@@ -137,28 +187,22 @@ function App() {
         </>
       )}
       {currentStep === 'employees' && selectedShop && selectedWeek && (
-        <EmployeeSelector
-          selectedShop={selectedShop}
-          selectedWeek={selectedWeek}
-          shopsData={shopsData}
-          onEmployeesChange={(newEmployees) => {
-            console.log('App: Updating employees for shop:', selectedShop, newEmployees);
-            setShopsData((prev) => ({
-              ...prev,
-              [selectedShop]: newEmployees,
-            }));
-          }}
-          onValidate={() => {
-            console.log('App: Validation des employés, passage à PlanningTable', { shopsData });
-            setCurrentStep('planning');
-          }}
-          onBack={goBackToWeek}
-        />
+        <>
+          {console.log('App: Rendering EmployeeSelector with shopsData:', shopsData, 'selectedShop:', selectedShop, 'selectedWeek:', selectedWeek)}
+          <EmployeeSelector
+            selectedShop={selectedShop}
+            selectedWeek={selectedWeek}
+            onEmployeesChange={handleEmployeesChange}
+            onValidate={handleValidate}
+            onBack={goBackToWeek}
+          />
+        </>
       )}
-      {currentStep === 'planning' && selectedShop && selectedWeek && shopsData[selectedShop] && Array.isArray(shopsData[selectedShop]) && shopsData[selectedShop].length > 0 && (
+      {currentStep === 'planning' && (
         <div style={{ textAlign: 'left' }}>
+          {console.log('App: Rendering PlanningTable with employees:', shopsData[selectedShop], 'selectedShop:', selectedShop, 'selectedWeek:', selectedWeek)}
           <PlanningTable
-            employees={shopsData[selectedShop]}
+            employees={shopsData[selectedShop] || []}
             selectedWeek={selectedWeek}
             selectedShop={selectedShop}
             onBackToShop={goBackToShopFromPlanning}

@@ -1,18 +1,52 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Modal from './Modal';
 import { FaCopy, FaPaste, FaEraser, FaUndo } from 'react-icons/fa';
-import { format, addDays } from 'date-fns';
+import { format, addDays, isMonday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import '../styles/PlanningTable.css';
 
 const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, onBackToWeek, onBackToEmployees, onWeekChange }) => {
-  const [selectedDay, setSelectedDay] = useState('Lundi');
-  const [planning, setPlanning] = useState(() => {
-    const saved = localStorage.getItem(`planning_${selectedShop}_${selectedWeek ? new Date(selectedWeek).toISOString().split('T')[0] : ''}`);
-    return saved ? JSON.parse(saved) : {};
+  const [localEmployees, setLocalEmployees] = useState(() => {
+    const saved = localStorage.getItem(`employees_${selectedShop}`);
+    console.log('PlanningTable: Initializing employees from localStorage:', saved);
+    return saved ? JSON.parse(saved) : employees;
   });
+
+  const [selectedWeekDate, setSelectedWeekDate] = useState(() => {
+    if (selectedWeek && isMonday(new Date(selectedWeek))) {
+      return new Date(selectedWeek);
+    }
+    return null;
+  });
+  const [previewWeek, setPreviewWeek] = useState('');
+  const [previewPlanning, setPreviewPlanning] = useState(null);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [planning, setPlanning] = useState({});
+
+  useEffect(() => {
+    console.log('PlanningTable: Received employees:', employees, 'Local employees:', localEmployees);
+  }, [employees, localEmployees]);
+
+  useEffect(() => {
+    if (selectedShop && selectedWeek) {
+      const key = `planning_${selectedShop}_${selectedWeek}`;
+      const saved = localStorage.getItem(key);
+      console.log('PlanningTable: Initializing planning from localStorage:', saved, 'key:', key);
+      setPlanning(saved ? JSON.parse(saved) : {});
+    }
+  }, [selectedShop, selectedWeek]);
+
+  useEffect(() => {
+    if (selectedShop && selectedWeekDate) {
+      const key = `planning_${selectedShop}_${selectedWeekDate.toISOString().split('T')[0]}`;
+      console.log(`PlanningTable: Saving planning to localStorage for ${key}:`, planning);
+      localStorage.setItem(key, JSON.stringify(planning));
+    }
+  }, [planning, selectedShop, selectedWeekDate]);
+
+  const [selectedDay, setSelectedDay] = useState('Lundi');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmCopyModalOpen, setIsConfirmCopyModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -29,12 +63,6 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
   const [selectedPreviousDays, setSelectedPreviousDays] = useState([]);
   const [sourceDay, setSourceDay] = useState('');
   const [targetDays, setTargetDays] = useState([]);
-
-  useEffect(() => {
-    const key = `planning_${selectedShop}_${selectedWeek ? new Date(selectedWeek).toISOString().split('T')[0] : ''}`;
-    localStorage.setItem(key, JSON.stringify(planning));
-    console.log(`Planning updated for ${selectedShop}, ${selectedWeek}, ${selectedDay}:`, planning);
-  }, [planning, selectedShop, selectedWeek]);
 
   const timeSlots = useMemo(() => {
     const slots = [];
@@ -85,29 +113,29 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
     });
   };
 
-  const calculateDailyHours = (employee, day) => {
+  const calculateDailyHours = (employee, day, planningData = planning) => {
     let total = 0;
     timeSlots.forEach((timeRange) => {
       const key = `${day}_${timeRange}_${employee}`;
-      if (planning[key]) total += 0.5;
+      if (planningData[key]) total += 0.5;
     });
     return total.toFixed(1);
   };
 
-  const calculateWeeklyHours = (employee) => {
+  const calculateWeeklyHours = (employee, planningData = planning) => {
     let total = 0;
     days.forEach((day) => {
       timeSlots.forEach((timeRange) => {
         const key = `${day}_${timeRange}_${employee}`;
-        if (planning[key]) total += 0.5;
+        if (planningData[key]) total += 0.5;
       });
     });
     return total.toFixed(1);
   };
 
   const calculateTotalDailyHours = () => {
-    return employees && employees.length
-      ? employees.reduce((sum, employee) => sum + parseFloat(calculateDailyHours(employee, selectedDay)), 0).toFixed(1)
+    return localEmployees && localEmployees.length
+      ? localEmployees.reduce((sum, employee) => sum + parseFloat(calculateDailyHours(employee, selectedDay)), 0).toFixed(1)
       : '0.0';
   };
 
@@ -137,9 +165,10 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
   };
 
   const copyDay = (day, mode = 'all', sourceEmployee = null) => {
+    console.log('copyDay: Starting copy for day:', day, 'mode:', mode, 'sourceEmployee:', sourceEmployee);
     const dayData = {};
     if (mode === 'all') {
-      employees.forEach((emp) => {
+      localEmployees.forEach((emp) => {
         timeSlots.forEach((timeRange) => {
           const key = `${day}_${timeRange}_${emp}`;
           if (planning[key]) dayData[key] = true;
@@ -156,14 +185,25 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
         if (planning[key]) dayData[key] = true;
       });
     }
+    console.log('copyDay: Collected dayData:', dayData);
     setCopiedData(dayData);
-    setCopyFeedback(`Données copiées pour ${day} (${mode === 'all' ? 'tous les employés' : mode === 'individual' ? 'individuel' : 'd’un employé à un autre'})`);
+    if (Object.keys(dayData).length === 0) {
+      setCopyFeedback('Aucune donnée à copier pour ce jour.');
+    } else {
+      setCopyFeedback(`Données copiées pour ${day} (${mode === 'all' ? 'tous les employés' : mode === 'individual' ? 'individuel' : 'd’un employé à un autre'})`);
+    }
     setTimeout(() => setCopyFeedback(''), 2000);
     console.log(`Copied ${mode} for ${day} from ${sourceEmployee || 'all'}`);
   };
 
   const pasteDay = (targetDays, targetEmp = null) => {
-    if (!copiedData) return;
+    console.log('pasteDay: Starting paste for targetDays:', targetDays, 'targetEmp:', targetEmp, 'copiedData:', copiedData);
+    if (!copiedData) {
+      setCopyFeedback('Aucune donnée à coller.');
+      setTimeout(() => setCopyFeedback(''), 2000);
+      console.warn('pasteDay: No copied data available');
+      return;
+    }
     setPlanning((prev) => {
       const updated = { ...prev };
       targetDays.forEach((day) => {
@@ -175,6 +215,7 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
           }
         });
       });
+      console.log('pasteDay: Updated planning:', updated);
       setCopyFeedback(`Données collées sur ${targetDays.join(', ')} ${targetEmp ? `pour ${targetEmp}` : ''}`);
       setTimeout(() => setCopyFeedback(''), 2000);
       console.log(`Pasted to ${targetDays.join(', ')} for ${targetEmp || 'all'}`);
@@ -184,14 +225,17 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
   };
 
   const copyPreviousWeek = (selectedDays) => {
+    console.log('copyPreviousWeek: Starting copy for previousWeek:', previousWeek, 'selectedDays:', selectedDays);
     if (!previousWeek) {
       setCopyFeedback('Veuillez sélectionner une semaine précédente.');
       setTimeout(() => setCopyFeedback(''), 2000);
+      console.warn('copyPreviousWeek: No previous week selected');
       return;
     }
     if (!selectedDays.length) {
       setCopyFeedback('Veuillez sélectionner au moins un jour à copier.');
       setTimeout(() => setCopyFeedback(''), 2000);
+      console.warn('copyPreviousWeek: No days selected');
       return;
     }
     const previousKey = `planning_${selectedShop}_${previousWeek}`;
@@ -208,8 +252,13 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
           }
         });
       });
+      console.log('copyPreviousWeek: Collected dayData:', dayData);
       setCopiedData(dayData);
-      setCopyFeedback(`Données copiées pour les jours ${selectedDays.join(', ')} de la semaine du ${previousWeek}`);
+      if (Object.keys(dayData).length === 0) {
+        setCopyFeedback('Aucune donnée à copier pour les jours sélectionnés.');
+      } else {
+        setCopyFeedback(`Données copiées pour les jours ${selectedDays.join(', ')} de la semaine du ${previousWeek}`);
+      }
       setTimeout(() => setCopyFeedback(''), 2000);
       console.log(`Copied days ${selectedDays.join(', ')} from week: ${previousKey}`);
     } else {
@@ -220,20 +269,24 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
   };
 
   const pastePreviousWeek = () => {
+    console.log('pastePreviousWeek: Starting paste, copiedData:', copiedData);
     if (!copiedData) {
       setCopyFeedback('Aucune donnée à coller.');
       setTimeout(() => setCopyFeedback(''), 2000);
+      console.warn('pastePreviousWeek: No copied data');
       return;
     }
     setIsConfirmCopyModalOpen(true);
   };
 
   const confirmCopyPreviousWeek = () => {
+    console.log('confirmCopyPreviousWeek: Confirming paste, copiedData:', copiedData);
     setPlanning((prev) => {
       const updated = { ...prev };
       Object.keys(copiedData).forEach((key) => {
         updated[key] = copiedData[key];
       });
+      console.log('confirmCopyPreviousWeek: Updated planning:', updated);
       return updated;
     });
     setCopyFeedback(`Jours ${selectedPreviousDays.join(', ')} collés avec succès.`);
@@ -243,39 +296,67 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
     setCopiedData(null);
   };
 
-  const toggleCopyPaste = () => {
-    const newShowCopyPaste = !showCopyPaste;
-    setShowCopyPaste(newShowCopyPaste);
-    console.log(`Copy-paste section ${newShowCopyPaste ? 'shown' : 'hidden'}`);
+  const showPreview = (week) => {
+    console.log('showPreview: Attempting to show preview for week:', week);
+    if (!week) {
+      setCopyFeedback('Veuillez sélectionner une semaine pour l’aperçu.');
+      setTimeout(() => setCopyFeedback(''), 2000);
+      console.warn('showPreview: No week selected');
+      return;
+    }
+    const saved = localStorage.getItem(`planning_${selectedShop}_${week}`);
+    const previewData = saved ? JSON.parse(saved) : {};
+    console.log('showPreview: Preview data loaded:', previewData);
+    setPreviewPlanning(previewData);
+    setPreviewWeek(week);
+    setIsPreviewModalOpen(true);
+    console.log('showPreview: Modal opened with isPreviewModalOpen:', true);
   };
 
-  const togglePreviousWeekCopy = () => {
-    const newShowPreviousWeekCopy = !showPreviousWeekCopy;
-    setShowPreviousWeekCopy(newShowPreviousWeekCopy);
-    console.log(`Previous week copy section ${newShowPreviousWeekCopy ? 'shown' : 'hidden'}`);
+  const getAvailableWeeks = () => {
+    const weeks = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith(`planning_${selectedShop}_`)) {
+        const weekDate = key.split('_')[2];
+        if (weekDate) {
+          const date = new Date(weekDate);
+          if (isMonday(date)) {
+            const monday = date;
+            const sunday = addDays(monday, 6);
+            const label = `Semaine du lundi ${format(monday, 'dd/MM/yy', { locale: fr })} au dimanche ${format(sunday, 'dd/MM/yy', { locale: fr })}`;
+            weeks.push({ value: weekDate, label });
+          }
+        }
+      }
+    }
+    return weeks.sort((a, b) => new Date(b.value) - new Date(a.value));
   };
 
-  const handleEmployeeClick = (employee) => {
-    console.log(`Opening weekly schedule for ${employee}`);
-    setSelectedEmployee(employee);
-    setIsEmployeeModalOpen(true);
+  const handleWeekChange = (e) => {
+    const newWeek = e.target.value;
+    console.log('PlanningTable: New week selected:', newWeek);
+    setSelectedWeekDate(newWeek ? new Date(newWeek) : null);
+    setPlanning((prev) => {
+      const saved = localStorage.getItem(`planning_${selectedShop}_${newWeek}`);
+      console.log('PlanningTable: Loading planning for week:', newWeek, 'saved:', saved);
+      return saved ? JSON.parse(saved) : {};
+    });
+    if (newWeek) {
+      showPreview(newWeek);
+    }
   };
 
-  const handleShopRecapClick = () => {
-    console.log(`Opening shop recap for ${selectedShop}`);
-    setIsShopModalOpen(true);
-  };
-
-  const isSlotActive = (employee, day, timeRange) => {
+  const isSlotActive = (employee, day, timeRange, planningData = planning) => {
     const key = `${day}_${timeRange}_${employee}`;
-    return !!planning[key];
+    return !!planningData[key];
   };
 
-  const getEmployeeWeeklySchedule = (employee) => {
+  const getEmployeeWeeklySchedule = (employee, planningData = planning) => {
     const schedule = [];
     days.forEach((day, index) => {
       const dailySlots = timeSlots
-        .filter((timeRange) => isSlotActive(employee, day, timeRange))
+        .filter((timeRange) => isSlotActive(employee, day, timeRange, planningData))
         .sort((a, b) => {
           const [startA] = a.split('-');
           const [startB] = b.split('-');
@@ -327,7 +408,7 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
     return schedule;
   };
 
-  const getShopDailySchedule = () => {
+  const getShopDailySchedule = (planningData = planning) => {
     const schedule = [];
     days.forEach((day, index) => {
       const dailyData = {
@@ -335,9 +416,9 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
         employees: [],
         color: getCouleurJour(index),
       };
-      employees && employees.forEach((employee) => {
+      localEmployees && localEmployees.forEach((employee) => {
         const dailySlots = timeSlots
-          .filter((timeRange) => isSlotActive(employee, day, timeRange))
+          .filter((timeRange) => isSlotActive(employee, day, timeRange, planningData))
           .sort((a, b) => {
             const [startA] = a.split('-');
             const [startB] = b.split('-');
@@ -403,18 +484,8 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
       doc.text(`Boutique: ${selectedShop || 'Non spécifié'}`, 20, 35);
       doc.text(
         `Semaine: ${
-          selectedWeek
-            ? new Date(selectedWeek).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              }) +
-              ' au ' +
-              new Date(new Date(selectedWeek).setDate(new Date(selectedWeek).getDate() + 6)).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })
+          selectedWeekDate
+            ? `lundi ${format(new Date(selectedWeekDate), 'dd/MM/yy', { locale: fr })} au dimanche ${format(addDays(new Date(selectedWeekDate), 6), 'dd/MM/yy', { locale: fr })}`
             : '-'
         }`,
         20,
@@ -481,18 +552,8 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
       doc.text(`Récapitulatif de ${selectedShop || 'Non spécifié'}`, 20, 20);
       doc.text(
         `Semaine: ${
-          selectedWeek
-            ? new Date(selectedWeek).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              }) +
-              ' au ' +
-              new Date(new Date(selectedWeek).setDate(new Date(selectedWeek).getDate() + 6)).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })
+          selectedWeekDate
+            ? `lundi ${format(new Date(selectedWeekDate), 'dd/MM/yy', { locale: fr })} au dimanche ${format(addDays(new Date(selectedWeekDate), 6), 'dd/MM/yy', { locale: fr })}`
             : '-'
         }`,
         20,
@@ -502,7 +563,7 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text('Cumul horaire hebdomadaire:', 20, 50);
-      const employeeHoursData = employees && employees.length ? employees.map((employee) => [
+      const employeeHoursData = localEmployees && localEmployees.length ? localEmployees.map((employee) => [
         { content: employee, styles: { fontStyle: 'bold' } },
         { content: `${calculateWeeklyHours(employee)} h`, styles: { fontStyle: 'normal' } },
       ]) : [];
@@ -563,573 +624,625 @@ const PlanningTable = ({ employees, selectedWeek, selectedShop, onBackToShop, on
                 data.row.cells[4].styles.fillColor = getCouleurJour(dayIndex);
                 data.row.cells[5].styles.fillColor = getCouleurJour(dayIndex);
                 data.row.cells[6].styles.fillColor = getCouleurJour(dayIndex);
+              }
             }
-          }
-        },
+          },
+        });
+
+        currentY = doc.lastAutoTable.finalY + 10;
       });
 
-      currentY = doc.lastAutoTable.finalY + 10;
-    });
-
-    doc.setFontSize(10);
-    doc.text('© Nicolas Lefèvre 2025 Klick Planning', 20, currentY + 5);
-    doc.save(`recap_boutique_${selectedShop}.pdf`);
-    console.log(`exportShopScheduleToPDF: PDF saved for shop ${selectedShop}`);
-  } catch (error) {
-    console.error(`exportShopScheduleToPDF: Error generating PDF for shop ${selectedShop}`, error);
-  }
-};
-
-const getAvailableWeeks = () => {
-  const weeks = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key.startsWith(`planning_${selectedShop}_`)) {
-      const weekDate = key.split('_')[2];
-      if (weekDate) {
-        const monday = new Date(weekDate);
-        const sunday = addDays(monday, 6);
-        const label = `Semaine du ${format(monday, 'iiii d MMMM', { locale: fr })} au ${format(sunday, 'iiii d MMMM', { locale: fr })}`;
-        weeks.push({ value: weekDate, label });
-      }
+      doc.setFontSize(10);
+      doc.text('© Nicolas Lefèvre 2025 Klick Planning', 20, currentY + 5);
+      doc.save(`recap_boutique_${selectedShop}.pdf`);
+      console.log(`exportShopScheduleToPDF: PDF saved for shop ${selectedShop}`);
+    } catch (error) {
+      console.error(`exportShopScheduleToPDF: Error generating PDF for shop ${selectedShop}`, error);
     }
-  }
-  return weeks.sort((a, b) => new Date(b.value) - new Date(a.value));
-};
+  };
 
-const handleWeekChange = (e) => {
-  if (!onWeekChange) {
-    console.warn('onWeekChange is not provided to PlanningTable');
-    return;
-  }
-  const newWeek = e.target.value;
-  onWeekChange(newWeek);
-  setPlanning(() => {
-    const saved = localStorage.getItem(`planning_${selectedShop}_${newWeek}`);
-    return saved ? JSON.parse(saved) : {};
-  });
-  console.log(`Switched to week: ${newWeek}`);
-};
+  const handleEmployeeClick = (employee) => {
+    console.log(`Opening weekly schedule for ${employee}`);
+    setSelectedEmployee(employee);
+    setIsEmployeeModalOpen(true);
+  };
 
-return (
-  <div className="planning-container">
-    <h2>Création du Planning</h2>
-    <div className="week-selector">
-      <label>Semaine :</label>
-      <select
-        value={selectedWeek || ''}
-        onChange={handleWeekChange}
-        className="week-select"
-      >
-        <option value="">Choisir une semaine</option>
-        {getAvailableWeeks().map((week) => (
-          <option key={week.value} value={week.value}>
-            {week.label}
-          </option>
-        ))}
-      </select>
-    </div>
-    <div className="total-hours-fixed">
-      {employees.map((employee, index) => (
-        <button
-          key={employee}
-          className="total-btn"
-          onClick={() => handleEmployeeClick(employee)}
+  const handleShopRecapClick = () => {
+    console.log(`Opening shop recap for ${selectedShop}`);
+    setIsShopModalOpen(true);
+  };
+
+  const toggleCopyPaste = () => {
+    const newShowCopyPaste = !showCopyPaste;
+    setShowCopyPaste(newShowCopyPaste);
+    console.log(`Copy-paste section ${newShowCopyPaste ? 'shown' : 'hidden'}`);
+  };
+
+  const togglePreviousWeekCopy = () => {
+    const newShowPreviousWeekCopy = !showPreviousWeekCopy;
+    setShowPreviousWeekCopy(newShowPreviousWeekCopy);
+    console.log(`Previous week copy section ${newShowPreviousWeekCopy ? 'shown' : 'hidden'}`);
+  };
+
+  return (
+    <div className="planning-container">
+      <h2>Création du Planning</h2>
+      <div className="week-selector">
+        <label>Semaine :</label>
+        <select
+          value={selectedWeekDate ? selectedWeekDate.toISOString().split('T')[0] : ''}
+          onChange={handleWeekChange}
+          className="week-select"
         >
-          Recap {employee}: <strong>{calculateWeeklyHours(employee)}h</strong>
+          <option value="">Choisir une semaine</option>
+          {getAvailableWeeks().map((week) => (
+            <option key={week.value} value={week.value}>
+              {week.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="total-hours-fixed">
+        {localEmployees.map((employee, index) => (
+          <button
+            key={employee}
+            className="total-btn"
+            onClick={() => handleEmployeeClick(employee)}
+          >
+            Recap {employee}: <strong>{calculateWeeklyHours(employee)}h</strong>
+          </button>
+        ))}
+        <button
+          className="total-btn shop-recap-btn"
+          onClick={handleShopRecapClick}
+        >
+          Recap Hebdomadaire
         </button>
-      ))}
-      <button
-        className="total-btn shop-recap-btn"
-        onClick={handleShopRecapClick}
-      >
-        Recap Hebdomadaire
-      </button>
-    </div>
-    <Modal
-      isOpen={isModalOpen}
-      onClose={() => {
-        console.log('Closing reset Modal');
-        setIsModalOpen(false);
-      }}
-      onConfirm={() => {
-        console.log('Confirming reset schedules');
-        resetSchedules();
-      }}
-      message="Voulez-vous vraiment effacer tous les créneaux ?"
-      style={{ width: '400px', padding: '20px' }}
-    />
-    <Modal
-      isOpen={isConfirmCopyModalOpen}
-      onClose={() => {
-        console.log('Closing confirm copy Modal');
-        setIsConfirmCopyModalOpen(false);
-      }}
-      onConfirm={() => {
-        console.log('Confirming paste previous week');
-        confirmCopyPreviousWeek();
-      }}
-      message={`Voulez-vous coller les jours ${selectedPreviousDays.join(', ')} de la semaine du ${previousWeek ? format(new Date(previousWeek), 'iiii d MMMM', { locale: fr }) : ''} ?`}
-      style={{ width: '400px', padding: '20px' }}
-    />
-    <Modal
-      isOpen={isEmployeeModalOpen}
-      onClose={() => {
-        console.log('Closing employee schedule Modal');
-        setIsEmployeeModalOpen(false);
-        setSelectedEmployee(null);
-      }}
-      onConfirm={() => {
-        console.log(`Calling exportEmployeeScheduleToPDF for ${selectedEmployee}`);
-        if (selectedEmployee) {
-          exportEmployeeScheduleToPDF(selectedEmployee);
-        } else {
-          console.error('No employee selected for PDF export');
-        }
-      }}
-      message={
-        selectedEmployee ? (
-          <div style={{ display: 'flex', justifyContent: 'left' }}>
-            <div style={{ width: '500px' }}>
-              <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '5px' }}>
-                Récapitulatif de {selectedEmployee} ({calculateWeeklyHours(selectedEmployee)} h)
-              </h3>
-              <p style={{ fontWeight: 'bold', margin: '5px 0', fontSize: '14px' }}>
-                Boutique: {selectedShop || 'Non spécifié'}
-              </p>
-              <p style={{ fontWeight: 'bold', margin: '5px 0', fontSize: '14px' }}>
-                Semaine: {selectedWeek ? new Date(selectedWeek).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + ' au ' + new Date(new Date(selectedWeek).setDate(new Date(selectedWeek).getDate() + 6)).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '-'}
-              </p>
-              <table className="recap-table" style={{ width: '100%', borderCollapse: 'collapse', margin: '10px 0' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#e5e5e5' }}>
-                    <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>Jour</th>
-                    <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>Arrivée</th>
-                    <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>Sortie</th>
-                    <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>Retour</th>
-                    <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>Fin</th>
-                    <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '80px', fontSize: '10px' }}>Heures effectives</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getEmployeeWeeklySchedule(selectedEmployee).map(({ day, arrival, departure, return: returnTime, end, totalHours, color }, index) => (
-                    <tr key={day} style={{ backgroundColor: color }}>
-                      <td style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>{day}</td>
-                      <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '70px', fontSize: '10px' }}>{arrival}</td>
-                      <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '70px', fontSize: '10px' }}>{departure}</td>
-                      <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '70px', fontSize: '10px' }}>{returnTime}</td>
-                      <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '70px', fontSize: '10px' }}>{end}</td>
-                      <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '80px', fontSize: '10px' }}>{totalHours}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p style={{ marginTop: '10px', fontSize: '14px' }}>Voulez-vous exporter en PDF ?</p>
-              <p className="copyright">© Nicolas Lefèvre 2025 Klick Planning</p>
-            </div>
-          </div>
-        ) : null
-      }
-      style={{ width: '500px', padding: '20px' }}
-    />
-    <Modal
-      isOpen={isShopModalOpen}
-      onClose={() => {
-        console.log('Closing shop recap Modal');
-        setIsShopModalOpen(false);
-      }}
-      onConfirm={() => {
-        console.log(`Calling exportShopScheduleToPDF for ${selectedShop}`);
-        exportShopScheduleToPDF();
-      }}
-      message={
-        <div style={{ display: 'flex', justifyContent: 'left' }}>
-          <div style={{ width: '500px', maxHeight: '50vh', overflowY: 'auto' }}>
-            <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '5px' }}>
-              Récapitulatif de {selectedShop || 'Non spécifié'}
-            </h3>
-            <p style={{ fontWeight: 'bold', margin: '5px 0', fontSize: '14px' }}>
-              Semaine: {selectedWeek ? new Date(selectedWeek).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + ' au ' + new Date(new Date(selectedWeek).setDate(new Date(selectedWeek).getDate() + 6)).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '-'}
-            </p>
-            <table className="recap-table" style={{ width: '100%', borderCollapse: 'collapse', margin: '10px 0' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#e5e5e5' }}>
-                  <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '100px', fontSize: '10px' }}>Employé</th>
-                  <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '80px', fontSize: '10px' }}>Heures hebdomadaires</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employees.map((employee) => (
-                  <tr key={employee}>
-                    <td style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '100px', fontSize: '10px' }}>{employee}</td>
-                    <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '80px', fontSize: '10px' }}>{calculateWeeklyHours(employee)} h</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {getShopDailySchedule().map((dayData, index) => (
-              <div key={dayData.day} style={{ marginBottom: '10px' }}>
-                <table className="recap-table" style={{ width: '100%', borderCollapse: 'collapse', margin: '0', backgroundColor: dayData.color }}>
+      </div>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          console.log('Closing reset Modal');
+          setIsModalOpen(false);
+        }}
+        onConfirm={() => {
+          console.log('Confirming reset schedules');
+          resetSchedules();
+        }}
+        message="Voulez-vous vraiment effacer tous les créneaux ?"
+        style={{ width: '400px', padding: '20px' }}
+      />
+      <Modal
+        isOpen={isConfirmCopyModalOpen}
+        onClose={() => {
+          console.log('Closing confirm copy Modal');
+          setIsConfirmCopyModalOpen(false);
+        }}
+        onConfirm={() => {
+          console.log('Confirming paste previous week');
+          confirmCopyPreviousWeek();
+        }}
+        message={`Voulez-vous coller les jours ${selectedPreviousDays.join(', ')} de la semaine du ${previousWeek ? format(new Date(previousWeek), 'iiii dd/MM/yy', { locale: fr }) : ''} ?`}
+        style={{ width: '400px', padding: '20px' }}
+      />
+      <Modal
+        isOpen={isEmployeeModalOpen}
+        onClose={() => {
+          console.log('Closing employee schedule Modal');
+          setIsEmployeeModalOpen(false);
+          setSelectedEmployee(null);
+        }}
+        onConfirm={() => {
+          console.log(`Calling exportEmployeeScheduleToPDF for ${selectedEmployee}`);
+          if (selectedEmployee) {
+            exportEmployeeScheduleToPDF(selectedEmployee);
+          } else {
+            console.error('No employee selected for PDF export');
+          }
+        }}
+        message={
+          selectedEmployee ? (
+            <div style={{ display: 'flex', justifyContent: 'left' }}>
+              <div style={{ width: '500px' }}>
+                <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '5px' }}>
+                  Récapitulatif de {selectedEmployee} ({calculateWeeklyHours(selectedEmployee)} h)
+                </h3>
+                <p style={{ fontWeight: 'bold', margin: '5px 0', fontSize: '14px' }}>
+                  Boutique: {selectedShop || 'Non spécifié'}
+                </p>
+                <p style={{ fontWeight: 'bold', margin: '5px 0', fontSize: '14px' }}>
+                  Semaine: {selectedWeekDate ? `lundi ${format(new Date(selectedWeekDate), 'dd/MM/yy', { locale: fr })} au dimanche ${format(addDays(new Date(selectedWeekDate), 6), 'dd/MM/yy', { locale: fr })}` : '-'}
+                </p>
+                <table className="recap-table" style={{ width: '100%', borderCollapse: 'collapse', margin: '10px 0' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#e5e5e5' }}>
-                      <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Jour</th>
-                      <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '90px', fontSize: '10px' }}>Employé</th>
-                      <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Arrivée</th>
-                      <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Sortie</th>
-                      <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Retour</th>
-                      <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Fin</th>
-                      <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>Heures effectives</th>
+                      <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>Jour</th>
+                      <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>Arrivée</th>
+                      <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>Sortie</th>
+                      <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>Retour</th>
+                      <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>Fin</th>
+                      <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '80px', fontSize: '10px' }}>Heures effectives</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {dayData.employees.map((emp) => (
-                      <tr key={emp.name}>
-                        <td style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>{dayData.day}</td>
-                        <td style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '90px', fontSize: '10px' }}>{emp.name}</td>
-                        <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '60px', fontSize: '10px' }}>{emp.arrival}</td>
-                        <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '60px', fontSize: '10px' }}>{emp.departure}</td>
-                        <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '60px', fontSize: '10px' }}>{emp.return}</td>
-                        <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '60px', fontSize: '10px' }}>{emp.end}</td>
-                        <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '70px', fontSize: '10px' }}>{emp.totalHours}</td>
+                    {getEmployeeWeeklySchedule(selectedEmployee).map(({ day, arrival, departure, return: returnTime, end, totalHours, color }, index) => (
+                      <tr key={day} style={{ backgroundColor: color }}>
+                        <td style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>{day}</td>
+                        <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '70px', fontSize: '10px' }}>{arrival}</td>
+                        <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '70px', fontSize: '10px' }}>{departure}</td>
+                        <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '70px', fontSize: '10px' }}>{returnTime}</td>
+                        <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '70px', fontSize: '10px' }}>{end}</td>
+                        <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '80px', fontSize: '10px' }}>{totalHours}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                <p style={{ marginTop: '10px', fontSize: '14px' }}>Voulez-vous exporter en PDF ?</p>
+                <p className="copyright">© Nicolas Lefèvre 2025 Klick Planning</p>
               </div>
-            ))}
-            <p style={{ marginTop: '10px', fontSize: '14px' }}>Voulez-vous exporter en PDF ?</p>
-            <p className="copyright">© Nicolas Lefèvre 2025 Klick Planning</p>
-          </div>
-        </div>
-      }
-      style={{ width: '500px', padding: '20px' }}
-    />
-    <div className="day-navigation">
-      {days.map((day) => (
-        <button
-          key={day}
-          onClick={() => {
-            setSelectedDay(day);
-            console.log(`Switched to ${day}`);
-          }}
-          className={`total-btn ${selectedDay === day ? 'active' : ''}`}
-        >
-          {day}
-        </button>
-      ))}
-    </div>
-    <p className="day-date">Jour : {getDayDate(selectedWeek, selectedDay)}</p>
-    <div className="table-container">
-      <div className="table-wrapper">
-        <table className="planning-table" key={selectedDay}>
-          <thead>
-            <tr>
-              <th className="fixed-col">Tranche horaire</th>
-              {timeSlots.map((timeRange, index) => (
-                <th
-                  key={`${selectedDay}_${timeRange}_${index}`}
-                  className="scrollable-col"
-                >
-                  {timeRange.split('-')[0]}<br />{timeRange.split('-')[1]}
-                </th>
+            </div>
+          ) : null
+        }
+        style={{ width: '500px', padding: '20px' }}
+      />
+      <Modal
+        isOpen={isShopModalOpen}
+        onClose={() => {
+          console.log('Closing shop recap Modal');
+          setIsShopModalOpen(false);
+        }}
+        onConfirm={() => {
+          console.log(`Calling exportShopScheduleToPDF for ${selectedShop}`);
+          exportShopScheduleToPDF();
+        }}
+        message={
+          <div style={{ display: 'flex', justifyContent: 'left' }}>
+            <div style={{ width: '500px', maxHeight: '50vh', overflowY: 'auto' }}>
+              <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '5px' }}>
+                Récapitulatif de {selectedShop || 'Non spécifié'}
+              </h3>
+              <p style={{ fontWeight: 'bold', margin: '5px 0', fontSize: '14px' }}>
+                Semaine: {selectedWeekDate ? `lundi ${format(new Date(selectedWeekDate), 'dd/MM/yy', { locale: fr })} au dimanche ${format(addDays(new Date(selectedWeekDate), 6), 'dd/MM/yy', { locale: fr })}` : '-'}
+              </p>
+              <table className="recap-table" style={{ width: '100%', borderCollapse: 'collapse', margin: '10px 0' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#e5e5e5' }}>
+                    <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '100px', fontSize: '10px' }}>Employé</th>
+                    <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '80px', fontSize: '10px' }}>Heures hebdomadaires</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {localEmployees.map((employee) => (
+                    <tr key={employee}>
+                      <td style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '100px', fontSize: '10px' }}>{employee}</td>
+                      <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '80px', fontSize: '10px' }}>{calculateWeeklyHours(employee)} h</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {getShopDailySchedule().map((dayData, index) => (
+                <div key={dayData.day} style={{ marginBottom: '10px' }}>
+                  <table className="recap-table" style={{ width: '100%', borderCollapse: 'collapse', margin: '0', backgroundColor: dayData.color }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#e5e5e5' }}>
+                        <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Jour</th>
+                        <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '90px', fontSize: '10px' }}>Employé</th>
+                        <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Arrivée</th>
+                        <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Sortie</th>
+                        <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Retour</th>
+                        <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Fin</th>
+                        <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>Heures effectives</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dayData.employees.map((emp) => (
+                        <tr key={emp.name}>
+                          <td style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>{dayData.day}</td>
+                          <td style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '90px', fontSize: '10px' }}>{emp.name}</td>
+                          <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '60px', fontSize: '10px' }}>{emp.arrival}</td>
+                          <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '60px', fontSize: '10px' }}>{emp.departure}</td>
+                          <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '60px', fontSize: '10px' }}>{emp.return}</td>
+                          <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '60px', fontSize: '10px' }}>{emp.end}</td>
+                          <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '70px', fontSize: '10px' }}>{emp.totalHours}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {employees.map((employee, index) => (
-              <tr key={`${selectedDay}_${employee}_${index}`}>
-                <td
-                  className="fixed-col"
-                  style={{ backgroundColor: getCouleurCellule(index) }}
-                >
-                  {employee} ({calculateDailyHours(employee, selectedDay)}h)
-                </td>
-                {timeSlots.map((timeRange, slotIndex) => (
-                  <td
-                    key={`${selectedDay}_${timeRange}_${employee}_${slotIndex}`}
+              <p style={{ marginTop: '10px', fontSize: '14px' }}>Voulez-vous exporter en PDF ?</p>
+              <p className="copyright">© Nicolas Lefèvre 2025 Klick Planning</p>
+            </div>
+          </div>
+        }
+        style={{ width: '500px', padding: '20px' }}
+      />
+      <Modal
+        isOpen={isPreviewModalOpen}
+        onClose={() => {
+          console.log('Closing preview Modal');
+          setIsPreviewModalOpen(false);
+          setPreviewPlanning(null);
+          setPreviewWeek('');
+        }}
+        message={
+          previewPlanning ? (
+            <div style={{ display: 'flex', justifyContent: 'left' }}>
+              <div style={{ width: '600px', maxHeight: '60vh', overflowY: 'auto' }}>
+                <h3 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '5px' }}>
+                  Aperçu du planning pour {selectedShop || 'Non spécifié'}
+                </h3>
+                <p style={{ fontWeight: 'bold', margin: '5px 0', fontSize: '14px' }}>
+                  Semaine: {previewWeek ? `lundi ${format(new Date(previewWeek), 'dd/MM/yy', { locale: fr })} au dimanche ${format(addDays(new Date(previewWeek), 6), 'dd/MM/yy', { locale: fr })}` : '-'}
+                </p>
+                {getShopDailySchedule(previewPlanning).map((dayData, index) => (
+                  <div key={dayData.day} style={{ marginBottom: '10px' }}>
+                    <table className="recap-table" style={{ width: '100%', borderCollapse: 'collapse', margin: '0', backgroundColor: dayData.color }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#e5e5e5' }}>
+                          <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Jour</th>
+                          <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '90px', fontSize: '10px' }}>Employé</th>
+                          <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Arrivée</th>
+                          <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Sortie</th>
+                          <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Retour</th>
+                          <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>Fin</th>
+                          <th style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '70px', fontSize: '10px' }}>Heures effectives</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dayData.employees.map((emp) => (
+                          <tr key={emp.name}>
+                            <td style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '60px', fontSize: '10px' }}>{dayData.day}</td>
+                            <td style={{ padding: '6px', fontWeight: 'bold', textAlign: 'left', width: '90px', fontSize: '10px' }}>{emp.name}</td>
+                            <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '60px', fontSize: '10px' }}>{emp.arrival}</td>
+                            <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '60px', fontSize: '10px' }}>{emp.departure}</td>
+                            <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '60px', fontSize: '10px' }}>{emp.return}</td>
+                            <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '60px', fontSize: '10px' }}>{emp.end}</td>
+                            <td style={{ padding: '6px', fontWeight: 'normal', textAlign: 'left', width: '70px', fontSize: '10px' }}>{emp.totalHours}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+                <p className="copyright">© Nicolas Lefèvre 2025 Klick Planning</p>
+              </div>
+            </div>
+          ) : (
+            <p>Aucun planning disponible pour cette semaine.</p>
+          )
+        }
+        style={{ width: '600px', padding: '20px' }}
+      />
+      <div className="day-navigation">
+        {days.map((day) => (
+          <button
+            key={day}
+            onClick={() => {
+              setSelectedDay(day);
+              console.log(`Switched to ${day}`);
+            }}
+            className={`total-btn ${selectedDay === day ? 'active' : ''}`}
+          >
+            {day}
+          </button>
+        ))}
+      </div>
+      <p className="day-date">Jour : {getDayDate(selectedWeekDate, selectedDay)}</p>
+      <div className="table-container">
+        <div className="table-wrapper">
+          <table className="planning-table" key={selectedDay}>
+            <thead>
+              <tr>
+                <th className="fixed-col">Tranche horaire</th>
+                {timeSlots.map((timeRange, index) => (
+                  <th
+                    key={`${selectedDay}_${timeRange}_${index}`}
                     className="scrollable-col"
-                    onClick={() => toggleTimeSlot(employee, selectedDay, timeRange)}
-                    style={{
-                      backgroundColor: isSlotActive(employee, selectedDay, timeRange)
-                        ? getCouleurCellule(index)
-                        : 'transparent',
-                      cursor: 'pointer',
-                    }}
                   >
-                    {isSlotActive(employee, selectedDay, timeRange) && '✔'}
-                  </td>
+                    {timeRange.split('-')[0]}<br />{timeRange.split('-')[1]}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {localEmployees.map((employee, index) => (
+                <tr key={`${selectedDay}_${employee}_${index}`}>
+                  <td
+                    className="fixed-col"
+                    style={{ backgroundColor: getCouleurCellule(index) }}
+                  >
+                    {employee} ({calculateDailyHours(employee, selectedDay)}h)
+                  </td>
+                  {timeSlots.map((timeRange, slotIndex) => (
+                    <td
+                      key={`${selectedDay}_${timeRange}_${employee}_${slotIndex}`}
+                      className="scrollable-col"
+                      onClick={() => toggleTimeSlot(employee, selectedDay, timeRange)}
+                      style={{
+                        backgroundColor: isSlotActive(employee, selectedDay, timeRange)
+                          ? getCouleurCellule(index)
+                          : 'transparent',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {isSlotActive(employee, selectedDay, timeRange) && '✔'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-    <div style={{ margin: '10px 0', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-      <button
-        onClick={() => {
-          console.log('Returning to shop selection', { selectedShop, selectedWeek });
-          onBackToShop();
-        }}
-        className="reset-button"
-        title="Retour à la sélection de la boutique"
-      >
-        <FaUndo style={{ marginRight: '5px' }} /> Retour à la boutique
-      </button>
-      <button
-        onClick={() => {
-          console.log('Returning to week selection', { selectedShop, selectedWeek });
-          onBackToWeek();
-        }}
-        className="reset-button"
-        title="Retour à la sélection de la semaine"
-      >
-        <FaUndo style={{ marginRight: '5px' }} /> Retour à la semaine
-      </button>
-      <button
-        onClick={() => {
-          console.log('Returning to employee selection', { selectedShop, selectedWeek });
-          onBackToEmployees();
-        }}
-        className="reset-button"
-        title="Retour à la sélection des employés"
-      >
-        <FaUndo style={{ marginRight: '5px' }} /> Retour aux employés
-      </button>
-    </div>
-    <div className="copy-paste-toggle">
-      <label>
-        <input
-          type="checkbox"
-          checked={showCopyPaste}
-          onChange={toggleCopyPaste}
-        />
-        Afficher les options de copie/coller
-      </label>
-    </div>
-    {showCopyPaste && (
-      <div className="copy-paste-section">
-        <h3>Copier/Coller par jour</h3>
-        <div className="copy-paste-controls">
-          <div className="control-group">
-            <label>Mode de copie :</label>
-            <select
-              value={copyMode}
-              onChange={(e) => setCopyMode(e.target.value)}
-              className="copy-mode-select"
-            >
-              <option value="all">Tous les employés</option>
-              <option value="individual">Employé individuel</option>
-              <option value="employeeToEmployee">D’un employé à un autre</option>
-            </select>
-          </div>
-          {copyMode === 'individual' && (
+      <div style={{ margin: '10px 0', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <button
+          onClick={() => {
+            console.log('Returning to shop selection', { selectedShop, selectedWeek: selectedWeekDate });
+            onBackToShop();
+          }}
+          className="reset-button"
+          title="Retour à la sélection de la boutique"
+        >
+          <FaUndo style={{ marginRight: '5px' }} /> Retour à la boutique
+        </button>
+        <button
+          onClick={() => {
+            console.log('Returning to week selection', { selectedShop, selectedWeek: selectedWeekDate });
+            onBackToWeek();
+          }}
+          className="reset-button"
+          title="Retour à la sélection de la semaine"
+        >
+          <FaUndo style={{ marginRight: '5px' }} /> Retour à la semaine
+        </button>
+        <button
+          onClick={() => {
+            console.log('Returning to employee selection', { selectedShop, selectedWeek: selectedWeekDate });
+            onBackToEmployees();
+          }}
+          className="reset-button"
+          title="Retour à la sélection des employés"
+        >
+          <FaUndo style={{ marginRight: '5px' }} /> Retour aux employés
+        </button>
+      </div>
+      <div className="copy-paste-toggle">
+        <label>
+          <input
+            type="checkbox"
+            checked={showCopyPaste}
+            onChange={toggleCopyPaste}
+          />
+          Afficher les options de copie/coller
+        </label>
+      </div>
+      {showCopyPaste && (
+        <div className="copy-paste-section">
+          <h3>Copier/Coller par jour</h3>
+          <div className="copy-paste-controls">
             <div className="control-group">
-              <label>Employé :</label>
+              <label>Mode de copie :</label>
               <select
-                value={selectedEmployee || ''}
-                onChange={(e) => setSelectedEmployee(e.target.value)}
-                className="employee-select"
+                value={copyMode}
+                onChange={(e) => setCopyMode(e.target.value)}
+                className="copy-mode-select"
               >
-                <option value="">Choisir un employé</option>
-                {employees.map((emp) => (
-                  <option key={emp} value={emp}>
-                    {emp}
-                  </option>
-                ))}
+                <option value="all">Tous les employés</option>
+                <option value="individual">Employé individuel</option>
+                <option value="employeeToEmployee">D’un employé à un autre</option>
               </select>
             </div>
-          )}
-          {copyMode === 'employeeToEmployee' && (
-            <>
+            {copyMode === 'individual' && (
               <div className="control-group">
-                <label>Employé source :</label>
+                <label>Employé :</label>
                 <select
                   value={selectedEmployee || ''}
                   onChange={(e) => setSelectedEmployee(e.target.value)}
                   className="employee-select"
                 >
-                  <option value="">Choisir l’employé source</option>
-                  {employees.map((emp) => (
+                  <option value="">Choisir un employé</option>
+                  {localEmployees.map((emp) => (
                     <option key={emp} value={emp}>
                       {emp}
                     </option>
                   ))}
                 </select>
               </div>
-              <div className="control-group">
-                <label>Employé cible :</label>
-                <select
-                  value={targetEmployee || ''}
-                  onChange={(e) => setTargetEmployee(e.target.value)}
-                  className="employee-select"
-                >
-                  <option value="">Choisir l’employé cible</option>
-                  {employees.map((emp) => (
-                    <option key={emp} value={emp}>
-                      {emp}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
-          <div className="control-group">
-            <label>Jour source :</label>
-            <select
-              value={sourceDay}
-              onChange={(e) => setSourceDay(e.target.value)}
-              className="day-select"
-            >
-              <option value="">Choisir un jour</option>
-              {days.map((day) => (
-                <option key={day} value={day}>
-                  {day}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="button-group">
-            <button
-              onClick={() => copyDay(sourceDay, copyMode, selectedEmployee)}
-              disabled={!sourceDay || (copyMode === 'individual' && !selectedEmployee) || (copyMode === 'employeeToEmployee' && !selectedEmployee)}
-              className="copy-btn"
-              title="Copier les créneaux du jour sélectionné"
-            >
-              <FaCopy style={{ marginRight: '5px' }} /> Copier
-            </button>
-            <button
-              onClick={() => pasteDay(targetDays, copyMode === 'employeeToEmployee' ? targetEmployee : null)}
-              disabled={!copiedData || !targetDays.length || (copyMode === 'employeeToEmployee' && !targetEmployee)}
-              className="paste-btn"
-              title="Coller les créneaux sur les jours cibles"
-            >
-              <FaPaste style={{ marginRight: '5px' }} /> Coller
-            </button>
-            <button
-              onClick={resetCopyPasteSelections}
-              className="reset-selections-btn"
-              title="Réinitialiser les sélections de copie/coller"
-            >
-              <FaUndo style={{ marginRight: '5px' }} /> Réinitialiser
-            </button>
-          </div>
-          <div className="control-group">
-            <label>Jours cibles :</label>
-            <div className="target-days">
-              {days.map((day) => (
-                <label key={day}>
-                  <input
-                    type="checkbox"
-                    checked={targetDays.includes(day)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setTargetDays([...targetDays, day]);
-                      } else {
-                        setTargetDays(targetDays.filter((d) => d !== day));
-                      }
-                    }}
-                  />
-                  {day}
-                </label>
-              ))}
-            </div>
-          </div>
-          {copyFeedback && <span className="copy-feedback">{copyFeedback}</span>}
-        </div>
-        <div className="previous-week-toggle">
-          <label>
-            <input
-              type="checkbox"
-              checked={showPreviousWeekCopy}
-              onChange={togglePreviousWeekCopy}
-            />
-            Afficher l’option de copie de semaine précédente
-          </label>
-        </div>
-        {showPreviousWeekCopy && (
-          <div className="previous-week-copy">
-            <h3>Copier une semaine précédente</h3>
+            )}
+            {copyMode === 'employeeToEmployee' && (
+              <>
+                <div className="control-group">
+                  <label>Employé source :</label>
+                  <select
+                    value={selectedEmployee || ''}
+                    onChange={(e) => setSelectedEmployee(e.target.value)}
+                    className="employee-select"
+                  >
+                    <option value="">Choisir l’employé source</option>
+                    {localEmployees.map((emp) => (
+                      <option key={emp} value={emp}>
+                        {emp}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="control-group">
+                  <label>Employé cible :</label>
+                  <select
+                    value={targetEmployee || ''}
+                    onChange={(e) => setTargetEmployee(e.target.value)}
+                    className="employee-select"
+                  >
+                    <option value="">Choisir l’employé cible</option>
+                    {localEmployees.map((emp) => (
+                      <option key={emp} value={emp}>
+                        {emp}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
             <div className="control-group">
-              <label>Semaine précédente :</label>
+              <label>Jour source :</label>
               <select
-                value={previousWeek}
-                onChange={(e) => setPreviousWeek(e.target.value)}
-                className="previous-week-select"
+                value={sourceDay}
+                onChange={(e) => setSourceDay(e.target.value)}
+                className="day-select"
               >
-                <option value="">Choisir une semaine</option>
-                {getAvailableWeeks().map((week) => (
-                  <option key={week.value} value={week.value}>
-                    {week.label}
+                <option value="">Choisir un jour</option>
+                {days.map((day) => (
+                  <option key={day} value={day}>
+                    {day}
                   </option>
                 ))}
               </select>
             </div>
-            {previousWeek && (
-              <div className="control-group">
-                <label>Jours à copier :</label>
-                <div className="previous-days">
-                  {days.map((day) => (
-                    <label key={day}>
-                      <input
-                        type="checkbox"
-                        checked={selectedPreviousDays.includes(day)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedPreviousDays([...selectedPreviousDays, day]);
-                          } else {
-                            setSelectedPreviousDays(selectedPreviousDays.filter((d) => d !== day));
-                          }
-                        }}
-                      />
-                      {day}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
             <div className="button-group">
               <button
-                onClick={() => copyPreviousWeek(selectedPreviousDays)}
-                disabled={!previousWeek || !selectedPreviousDays.length}
+                onClick={() => copyDay(sourceDay, copyMode, selectedEmployee)}
+                disabled={!sourceDay || (copyMode === 'individual' && !selectedEmployee) || (copyMode === 'employeeToEmployee' && !selectedEmployee)}
                 className="copy-btn"
-                title="Copier les jours sélectionnés de la semaine précédente"
+                title="Copier les créneaux du jour sélectionné"
               >
                 <FaCopy style={{ marginRight: '5px' }} /> Copier
               </button>
               <button
-                onClick={pastePreviousWeek}
-                disabled={!copiedData}
+                onClick={() => pasteDay(targetDays, copyMode === 'employeeToEmployee' ? targetEmployee : null)}
+                disabled={!copiedData || !targetDays.length || (copyMode === 'employeeToEmployee' && !targetEmployee)}
                 className="paste-btn"
-                title="Coller les jours copiés dans la semaine actuelle"
+                title="Coller les créneaux sur les jours cibles"
               >
                 <FaPaste style={{ marginRight: '5px' }} /> Coller
               </button>
+              <button
+                onClick={resetCopyPasteSelections}
+                className="reset-selections-btn"
+                title="Réinitialiser les sélections de copie/coller"
+              >
+                <FaUndo style={{ marginRight: '5px' }} /> Réinitialiser
+              </button>
+            </div>
+            <div className="control-group">
+              <label>Jours cibles :</label>
+              <div className="target-days">
+                {days.map((day) => (
+                  <label key={day}>
+                    <input
+                      type="checkbox"
+                      checked={targetDays.includes(day)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setTargetDays([...targetDays, day]);
+                        } else {
+                          setTargetDays(targetDays.filter((d) => d !== day));
+                        }
+                      }}
+                    />
+                    {day}
+                  </label>
+                ))}
+              </div>
             </div>
             {copyFeedback && <span className="copy-feedback">{copyFeedback}</span>}
-            {!getAvailableWeeks().length && (
-              <p className="no-weeks">Aucune semaine précédente disponible.</p>
-            )}
           </div>
-        )}
-        <div className="control-group">
-          <button
-            onClick={() => {
-              console.log('Opening reset modal');
-              setIsModalOpen(true);
-            }}
-            className="reset-button"
-            title="Effacer tout le planning"
-          >
-            <FaEraser style={{ marginRight: '5px' }} /> Effacer le planning
-          </button>
-          {resetFeedback && <span className="copy-feedback">{resetFeedback}</span>}
+          <div className="previous-week-toggle">
+            <label>
+              <input
+                type="checkbox"
+                checked={showPreviousWeekCopy}
+                onChange={togglePreviousWeekCopy}
+              />
+              Afficher l’option de copie de semaine précédente
+            </label>
+          </div>
+          {showPreviousWeekCopy && (
+            <div className="previous-week-copy">
+              <h3>Copier une semaine précédente</h3>
+              <div className="control-group">
+                <label>Semaine précédente :</label>
+                <select
+                  value={previousWeek}
+                  onChange={(e) => {
+                    console.log('PlanningTable: Previous week selected:', e.target.value);
+                    setPreviousWeek(e.target.value);
+                  }}
+                  className="previous-week-select"
+                >
+                  <option value="">Choisir une semaine</option>
+                  {getAvailableWeeks().map((week) => (
+                    <option key={week.value} value={week.value}>
+                      {week.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {previousWeek && (
+                <div className="control-group">
+                  <label>Jours à copier :</label>
+                  <div className="previous-days">
+                    {days.map((day) => (
+                      <label key={day}>
+                        <input
+                          type="checkbox"
+                          checked={selectedPreviousDays.includes(day)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedPreviousDays([...selectedPreviousDays, day]);
+                            } else {
+                              setSelectedPreviousDays(selectedPreviousDays.filter((d) => d !== day));
+                            }
+                          }}
+                        />
+                        {day}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="button-group">
+                <button
+                  onClick={() => copyPreviousWeek(selectedPreviousDays)}
+                  disabled={!previousWeek || !selectedPreviousDays.length}
+                  className="copy-btn"
+                  title="Copier les jours sélectionnés de la semaine précédente"
+                >
+                  <FaCopy style={{ marginRight: '5px' }} /> Copier
+                </button>
+                <button
+                  onClick={pastePreviousWeek}
+                  disabled={!copiedData}
+                  className="paste-btn"
+                  title="Coller les jours copiés dans la semaine actuelle"
+                >
+                  <FaPaste style={{ marginRight: '5px' }} /> Coller
+                </button>
+              </div>
+              {copyFeedback && <span className="copy-feedback">{copyFeedback}</span>}
+              {!getAvailableWeeks().length && (
+                <p className="no-weeks">Aucune semaine précédente disponible.</p>
+              )}
+            </div>
+          )}
+          <div className="control-group">
+            <button
+              onClick={() => {
+                console.log('Opening reset modal');
+                setIsModalOpen(true);
+              }}
+              className="reset-button"
+              title="Effacer tout le planning"
+            >
+              <FaEraser style={{ marginRight: '5px' }} /> Effacer le planning
+            </button>
+            {resetFeedback && <span className="copy-feedback">{resetFeedback}</span>}
+          </div>
         </div>
-      </div>
-    )}
-    <p className="copyright">© Nicolas Lefèvre 2025 Klick Planning</p>
-  </div>
-);
+      )}
+      <p className="copyright">© Nicolas Lefèvre 2025 Klick Planning</p>
+    </div>
+  );
 };
 
 export default PlanningTable;
